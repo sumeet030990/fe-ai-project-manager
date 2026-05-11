@@ -249,6 +249,7 @@ export interface StoryResponse {
   story_points?: number;
   is_ai_generated: boolean;
   azure_work_item_id?: number;
+  jira_issue_key?: string;
   business_rules?: string;
   acceptance_criteria?: string;
   file_references?: string;
@@ -256,6 +257,20 @@ export interface StoryResponse {
   created_at: string;
   updated_at: string;
 }
+
+export interface JiraSyncFailure {
+  jira_key: string;
+  title: string;
+  error: string;
+}
+
+export interface JiraSyncResult {
+  fetched: number;
+  imported: StoryResponse[];
+  skipped: number;
+  failed: JiraSyncFailure[];
+}
+
 
 export interface StoryCreate {
   title: string;

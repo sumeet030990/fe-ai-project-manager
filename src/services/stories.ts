@@ -47,8 +47,10 @@ export const updateStory = async (
   return data;
 };
 
-export const deleteStory = async (moduleId: string, storyId: string): Promise<void> => {
-  await axiosInstance.delete(`/modules/${moduleId}/stories/${storyId}`);
+export const deleteStory = async (moduleId: string, storyId: string, deleteRemote = false): Promise<void> => {
+  await axiosInstance.delete(`/modules/${moduleId}/stories/${storyId}`, {
+    params: { delete_remote: deleteRemote },
+  });
 };
 
 export const generateStories = async (

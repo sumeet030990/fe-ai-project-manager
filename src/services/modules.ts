@@ -45,6 +45,8 @@ export const updateModule = async (
   return data;
 };
 
-export const deleteModule = async (projectId: string, moduleId: string): Promise<void> => {
-  await axiosInstance.delete(`/projects/${projectId}/modules/${moduleId}`);
+export const deleteModule = async (projectId: string, moduleId: string, deleteRemote = false): Promise<void> => {
+  await axiosInstance.delete(`/projects/${projectId}/modules/${moduleId}`, {
+    params: { delete_remote: deleteRemote },
+  });
 };

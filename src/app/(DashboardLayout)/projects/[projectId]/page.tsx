@@ -723,7 +723,8 @@ function ModulesTab({ projectId }: { projectId: string }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteModule(projectId, id),
+    mutationFn: ({ id, deleteRemote }: { id: string; deleteRemote: boolean }) =>
+      deleteModule(projectId, id, deleteRemote),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules", projectId] });
       setDeleteTarget(null);
@@ -989,16 +990,27 @@ function ModulesTab({ projectId }: { projectId: string }) {
             Delete <strong>{deleteTarget?.name}</strong>? All associated stories
             will also be removed.
           </Typography>
+          <Typography variant="caption" color="textSecondary" display="block" mt={1}>
+            Choose whether to also delete linked JIRA issues for all stories in this module.
+          </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
           <Button
+            variant="outlined"
+            color="error"
+            disabled={deleteMutation.isPending}
+            onClick={() => deleteTarget && deleteMutation.mutate({ id: deleteTarget.id, deleteRemote: false })}
+          >
+            {deleteMutation.isPending ? "Deleting..." : "Delete Locally"}
+          </Button>
+          <Button
             variant="contained"
             color="error"
             disabled={deleteMutation.isPending}
-            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+            onClick={() => deleteTarget && deleteMutation.mutate({ id: deleteTarget.id, deleteRemote: true })}
           >
-            Delete
+            {deleteMutation.isPending ? "Deleting..." : "Delete Locally + JIRA"}
           </Button>
         </DialogActions>
       </Dialog>
