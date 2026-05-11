@@ -338,3 +338,22 @@ export interface TestCaseUpdate {
 export interface TestCaseGenerateRequest {
   context?: string;
 }
+
+// Prompt
+export interface PromptCreate {
+  content: string;
+  target_ai?: string;
+  tech_stacks?: string;
+  extra_context?: string;
+}
+
+export interface PromptResponse {
+  id: string;
+  story_id: string;
+  content: string;
+  target_ai: string;
+  tech_stacks?: string;
+  extra_context?: string;
+  created_at: string;
+  updated_at: string;
+}

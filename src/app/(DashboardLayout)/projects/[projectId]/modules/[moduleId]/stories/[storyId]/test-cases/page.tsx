@@ -4,17 +4,21 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   Grid,
   IconButton,
   InputLabel,
+  ListItemText,
   MenuItem,
+  OutlinedInput,
   Paper,
   Select,
   Snackbar,
@@ -31,6 +35,9 @@ import {
 } from "@mui/material";
 import {
   IconArrowLeft,
+  IconCode,
+  IconCopy,
+  IconCheck,
   IconPencil,
   IconPlus,
   IconRobot,
@@ -42,6 +49,7 @@ import PageContainer from "@/app/(DashboardLayout)/components/container/PageCont
 import { getModule } from "@/services/modules";
 import { getProject } from "@/services/projects";
 import { getStory } from "@/services/stories";
+import { getTechStacks } from "@/services/tech_stacks";
 import {
   createTestCase,
   deleteTestCase,
@@ -49,7 +57,9 @@ import {
   getTestCases,
   updateTestCase,
 } from "@/services/test-cases";
+import { savePrompt } from "@/services/prompts";
 import {
+  PromptCreate,
   TestCaseCreate,
   TestCaseGenerateRequest,
   TestCaseResponse,
@@ -60,6 +70,14 @@ import {
 type Snack = { open: boolean; message: string; severity: "success" | "error" };
 
 const TEST_CASE_TYPES: TestCaseType[] = ["positive", "negative"];
+
+const AI_OPTIONS = [
+  { value: "general", label: "General Purpose" },
+  { value: "copilot", label: "GitHub Copilot" },
+  { value: "claude", label: "Claude (Anthropic)" },
+  { value: "chatgpt", label: "ChatGPT / GPT-4" },
+  { value: "gemini", label: "Gemini (Google)" },
+];
 
 const emptyForm = {
   title: "",
@@ -90,6 +108,13 @@ export default function TestCasesPage() {
   const [deleteTarget, setDeleteTarget] = useState<TestCaseResponse | null>(null);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generateContext, setGenerateContext] = useState("");
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [promptPreviewOpen, setPromptPreviewOpen] = useState(false);
+  const [selectedTechStackIds, setSelectedTechStackIds] = useState<string[]>([]);
+  const [targetAI, setTargetAI] = useState("general");
+  const [promptExtraContext, setPromptExtraContext] = useState("");
+  const [generatedPrompt, setGeneratedPrompt] = useState("");
+  const [copied, setCopied] = useState(false);
   const [snack, setSnack] = useState<Snack>({ open: false, message: "", severity: "success" });
 
   const toast = (message: string, severity: "success" | "error") =>
@@ -117,6 +142,12 @@ export default function TestCasesPage() {
     queryKey: ["test-cases", moduleId, storyId, page],
     queryFn: () => getTestCases(moduleId, storyId, page + 1, rowsPerPage),
     enabled: !!moduleId && !!storyId,
+  });
+
+  const { data: techStacksData } = useQuery({
+    queryKey: ["tech-stacks", projectId],
+    queryFn: () => getTechStacks(projectId),
+    enabled: !!projectId,
   });
 
   const createMutation = useMutation({
@@ -165,6 +196,92 @@ export default function TestCasesPage() {
     },
     onError: () => toast("Failed to generate test cases", "error"),
   });
+
+  const savePromptMutation = useMutation({
+    mutationFn: (payload: PromptCreate) => savePrompt(moduleId, storyId, payload),
+    onSuccess: () => {
+      toast("Prompt saved successfully", "success");
+    },
+    onError: () => toast("Failed to save prompt", "error"),
+  });
+
+  const buildPrompt = (): string => {
+    const selectedStacks =
+      techStacksData?.items.filter((ts) => selectedTechStackIds.includes(ts.id)) ?? [];
+    const positiveTcs = tcData?.items.filter((tc) => tc.test_type === "positive") ?? [];
+    const negativeTcs = tcData?.items.filter((tc) => tc.test_type === "negative") ?? [];
+
+    const aiInstructions: Record<string, string> = {
+      general:
+        "Write test code for all the test cases listed above using appropriate testing frameworks and best practices.",
+      copilot:
+        "Using GitHub Copilot, generate test code for the above test cases. Infer the appropriate testing framework from the technology stack (e.g., Jest for React/Node, pytest for Python, xUnit for .NET). Include inline comments explaining each test scenario.",
+      claude:
+        "Analyze the story context and existing test cases carefully. Write clean, well-structured test code with descriptive test names and clear assertions. Group tests logically and note any edge cases beyond those already listed.",
+      chatgpt:
+        "Write comprehensive test code for all the test cases above. Include setup/teardown where needed, mock external dependencies, and ensure each test is isolated and deterministic.",
+      gemini:
+        "Generate well-structured test code covering all listed test cases. Follow the conventions of the technology stack, use descriptive test names, and organize tests by feature or scenario.",
+    };
+
+    let prompt = `# Write Test Cases: ${story?.title ?? "Story"}\n\n`;
+    prompt += `## Story Context\n`;
+    prompt += `**Title:** ${story?.title ?? ""}\n`;
+    if (story?.description) prompt += `**Description:** ${story.description}\n`;
+    if (story?.acceptance_criteria) {
+      prompt += `\n**Acceptance Criteria:**\n${story.acceptance_criteria}\n`;
+    }
+    if (story?.business_rules) {
+      prompt += `\n**Business Rules:**\n${story.business_rules}\n`;
+    }
+
+    if (selectedStacks.length > 0) {
+      prompt += `\n## Technology Stack\n`;
+      selectedStacks.forEach((ts) => {
+        prompt += `- **${ts.name}**${ts.version ? ` v${ts.version}` : ""} [${ts.category}]${ts.description ? ` — ${ts.description}` : ""}\n`;
+      });
+    }
+
+    if (positiveTcs.length > 0) {
+      prompt += `\n## Positive Test Cases (Happy Path)\n`;
+      positiveTcs.forEach((tc, i) => {
+        prompt += `\n### ${i + 1}. ${tc.title}\n`;
+        if (tc.description) prompt += `**Preconditions:** ${tc.description}\n`;
+        if (tc.steps) prompt += `**Steps:**\n${tc.steps}\n`;
+        if (tc.expected_result) prompt += `**Expected Result:** ${tc.expected_result}\n`;
+      });
+    }
+
+    if (negativeTcs.length > 0) {
+      prompt += `\n## Negative Test Cases (Error Path / Edge Cases)\n`;
+      negativeTcs.forEach((tc, i) => {
+        prompt += `\n### ${i + 1}. ${tc.title}\n`;
+        if (tc.description) prompt += `**Preconditions:** ${tc.description}\n`;
+        if (tc.steps) prompt += `**Steps:**\n${tc.steps}\n`;
+        if (tc.expected_result) prompt += `**Expected Result:** ${tc.expected_result}\n`;
+      });
+    }
+
+    prompt += `\n## Your Task\n${aiInstructions[targetAI] ?? aiInstructions.general}\n`;
+
+    if (promptExtraContext.trim()) {
+      prompt += `\n## Additional Context\n${promptExtraContext.trim()}\n`;
+    }
+
+    return prompt;
+  };
+
+  const handleGeneratePrompt = () => {
+    setGeneratedPrompt(buildPrompt());
+    setPromptDialogOpen(false);
+    setPromptPreviewOpen(true);
+  };
+
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(generatedPrompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const openAdd = () => {
     setEditingTc(null);
@@ -275,6 +392,15 @@ export default function TestCasesPage() {
 
       {/* Actions */}
       <Box display="flex" gap={1} justifyContent="flex-end" mb={2}>
+        <Tooltip title="Generate a prompt to write test cases in your preferred AI tool">
+          <Button
+            variant="outlined"
+            startIcon={<IconCode size={16} />}
+            onClick={() => setPromptDialogOpen(true)}
+          >
+            Generate Prompt
+          </Button>
+        </Tooltip>
         <Tooltip title="AI: Generate positive and negative test cases from story details">
           <Button
             variant="outlined"
@@ -585,6 +711,167 @@ export default function TestCasesPage() {
             disabled={generateMutation.isPending}
           >
             {generateMutation.isPending ? "Generating..." : "Generate Test Cases"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Generate Prompt Config Dialog */}
+      <Dialog
+        open={promptDialogOpen}
+        onClose={() => setPromptDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <IconCode size={20} />
+            Generate Test Case Prompt
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="textSecondary" mb={2}>
+            Configure the prompt. It will include all existing positive and negative test cases so
+            your chosen AI tool can write the implementation code.
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid size={12}>
+              <FormControl fullWidth>
+                <InputLabel>Target AI Tool</InputLabel>
+                <Select
+                  value={targetAI}
+                  label="Target AI Tool"
+                  onChange={(e) => setTargetAI(e.target.value)}
+                >
+                  {AI_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={12}>
+              <FormControl fullWidth>
+                <InputLabel>Tech Stack (optional)</InputLabel>
+                <Select
+                  multiple
+                  value={selectedTechStackIds}
+                  onChange={(e) => setSelectedTechStackIds(e.target.value as string[])}
+                  input={<OutlinedInput label="Tech Stack (optional)" />}
+                  renderValue={(selected) =>
+                    (selected as string[])
+                      .map(
+                        (id) =>
+                          techStacksData?.items.find((ts) => ts.id === id)?.name ?? id
+                      )
+                      .join(", ")
+                  }
+                >
+                  {techStacksData?.items.map((ts) => (
+                    <MenuItem key={ts.id} value={ts.id}>
+                      <Checkbox checked={selectedTechStackIds.includes(ts.id)} />
+                      <ListItemText
+                        primary={ts.name}
+                        secondary={`${ts.category}${ts.version ? ` v${ts.version}` : ""}`}
+                      />
+                    </MenuItem>
+                  ))}
+                  {!techStacksData?.items.length && (
+                    <MenuItem disabled>
+                      <Typography variant="caption" color="textSecondary">
+                        No tech stacks configured for this project
+                      </Typography>
+                    </MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                label="Extra Context (optional)"
+                fullWidth
+                multiline
+                rows={3}
+                value={promptExtraContext}
+                onChange={(e) => setPromptExtraContext(e.target.value)}
+                placeholder="e.g. Use Jest + React Testing Library, mock the API with MSW, follow AAA pattern..."
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setPromptDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" startIcon={<IconCode size={16} />} onClick={handleGeneratePrompt}>
+            Generate Prompt
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Generated Prompt Preview Dialog */}
+      <Dialog
+        open={promptPreviewOpen}
+        onClose={() => setPromptPreviewOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box display="flex" alignItems="center" gap={1}>
+              <IconCode size={20} />
+              Generated Prompt
+            </Box>
+            <Chip
+              label={AI_OPTIONS.find((o) => o.value === targetAI)?.label ?? targetAI}
+              size="small"
+              variant="outlined"
+              color="primary"
+            />
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            fullWidth
+            multiline
+            rows={20}
+            value={generatedPrompt}
+            slotProps={{ input: { readOnly: true, sx: { fontFamily: "monospace", fontSize: 13 } } }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setPromptPreviewOpen(false);
+              setPromptDialogOpen(true);
+            }}
+          >
+            Back
+          </Button>
+          <Box flexGrow={1} />
+          <Button
+            variant="outlined"
+            startIcon={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+            onClick={handleCopyPrompt}
+            color={copied ? "success" : "primary"}
+          >
+            {copied ? "Copied!" : "Copy to Clipboard"}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const selectedStacks = techStacksData?.items
+                .filter((ts) => selectedTechStackIds.includes(ts.id))
+                .map((ts) => ts.name)
+                .join(", ");
+              savePromptMutation.mutate({
+                content: generatedPrompt,
+                target_ai: targetAI,
+                tech_stacks: selectedStacks || undefined,
+                extra_context: promptExtraContext || undefined,
+              });
+            }}
+            disabled={savePromptMutation.isPending}
+          >
+            {savePromptMutation.isPending ? "Saving..." : "Save to Database"}
           </Button>
         </DialogActions>
       </Dialog>
