@@ -34,6 +34,7 @@ import {
   IconArrowLeft,
   IconCloudDownload,
   IconCloudUpload,
+  IconListCheck,
   IconPencil,
   IconPlus,
   IconRefresh,
@@ -507,6 +508,19 @@ export default function ModuleDetailPage() {
                         )}
                       </TableCell>
                       <TableCell align="right">
+                        <Tooltip title="View Test Cases">
+                          <IconButton
+                            size="small"
+                            color="inherit"
+                            onClick={() =>
+                              router.push(
+                                `/projects/${projectId}/modules/${moduleId}/stories/${story.id}/test-cases`
+                              )
+                            }
+                          >
+                            <IconListCheck size={16} />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="AI Refine story">
                           <IconButton
                             size="small"

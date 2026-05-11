@@ -299,3 +299,42 @@ export interface StoryGenerateRequest {
 export interface StoryRefineRequest {
   context?: string;
 }
+
+// Test Case
+export type TestCaseType = "positive" | "negative";
+
+export interface TestCaseResponse {
+  id: string;
+  story_id: string;
+  title: string;
+  description?: string;
+  steps?: string;
+  expected_result?: string;
+  test_type: TestCaseType;
+  order: number;
+  is_ai_generated: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TestCaseCreate {
+  title: string;
+  description?: string;
+  steps?: string;
+  expected_result?: string;
+  test_type?: TestCaseType;
+  order?: number;
+}
+
+export interface TestCaseUpdate {
+  title?: string;
+  description?: string;
+  steps?: string;
+  expected_result?: string;
+  test_type?: TestCaseType;
+  order?: number;
+}
+
+export interface TestCaseGenerateRequest {
+  context?: string;
+}
