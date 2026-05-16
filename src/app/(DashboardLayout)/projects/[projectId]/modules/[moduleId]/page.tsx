@@ -424,6 +424,9 @@ export default function ModuleDetailPage() {
                     <Typography variant="subtitle2">Points</Typography>
                   </TableCell>
                   <TableCell>
+                    <Typography variant="subtitle2">Assignee</Typography>
+                  </TableCell>
+                  <TableCell>
                     <Typography variant="subtitle2">AI</Typography>
                   </TableCell>
                   <TableCell>
@@ -437,7 +440,7 @@ export default function ModuleDetailPage() {
               <TableBody>
                 {storiesData?.items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
+                    <TableCell colSpan={9} align="center">
                       <Typography color="textSecondary" py={2}>
                         No stories yet. Add one manually or use AI generation.
                       </Typography>
@@ -496,6 +499,13 @@ export default function ModuleDetailPage() {
                         ) : (
                           "—"
                         )}
+                      </TableCell>
+                      <TableCell>
+                        {story.assignee ? (
+                          <Typography variant="caption" noWrap>
+                            {[story.assignee.first_name, story.assignee.last_name].filter(Boolean).join(" ") || story.assignee.email}
+                          </Typography>
+                        ) : "—"}
                       </TableCell>
                       <TableCell>
                         {story.is_ai_generated && (
@@ -1039,14 +1049,19 @@ export default function ModuleDetailPage() {
               <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
                 <Chip label={`${syncResult.fetched} fetched`} variant="outlined" size="small" />
                 <Chip label={`${syncResult.imported.length} imported`} color="success" size="small" />
-                <Chip label={`${syncResult.skipped} skipped`} size="small" />
+                {syncResult.updated.length > 0 && (
+                  <Chip label={`${syncResult.updated.length} updated`} color="primary" size="small" />
+                )}
+                {syncResult.users_linked.length > 0 && (
+                  <Chip label={`${syncResult.users_linked.length} user${syncResult.users_linked.length !== 1 ? "s" : ""} linked`} color="secondary" size="small" />
+                )}
                 {syncResult.failed.length > 0 && (
                   <Chip label={`${syncResult.failed.length} failed`} color="error" size="small" />
                 )}
               </Box>
-              {syncResult.imported.length === 0 && syncResult.failed.length === 0 && (
+              {syncResult.imported.length === 0 && syncResult.updated.length === 0 && syncResult.failed.length === 0 && (
                 <Typography variant="body2" color="textSecondary">
-                  All {syncResult.fetched} JIRA issue{syncResult.fetched !== 1 ? "s are" : " is"} already in the system.
+                  All {syncResult.fetched} JIRA issue{syncResult.fetched !== 1 ? "s are" : " is"} already up to date.
                 </Typography>
               )}
               {syncResult.imported.length > 0 && (
@@ -1056,6 +1071,31 @@ export default function ModuleDetailPage() {
                     <Box key={s.id} display="flex" alignItems="center" gap={1} mb={0.5}>
                       <Chip label={s.jira_issue_key} size="small" color="info" variant="outlined" icon={<IconTicket size={10} />} />
                       <Typography variant="body2">{s.title}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+              {syncResult.updated.length > 0 && (
+                <Box mb={2}>
+                  <Typography variant="subtitle2" mb={1}>Status Updated</Typography>
+                  {syncResult.updated.map((s) => (
+                    <Box key={s.id} display="flex" alignItems="center" gap={1} mb={0.5}>
+                      <Chip label={s.jira_issue_key} size="small" color="primary" variant="outlined" icon={<IconTicket size={10} />} />
+                      <Typography variant="body2">{s.title}</Typography>
+                      <Chip label={s.status} size="small" variant="outlined" />
+                    </Box>
+                  ))}
+                </Box>
+              )}
+              {syncResult.users_linked.length > 0 && (
+                <Box mb={2}>
+                  <Typography variant="subtitle2" mb={1}>Users Linked to JIRA</Typography>
+                  {syncResult.users_linked.map((u) => (
+                    <Box key={u.id} display="flex" alignItems="center" gap={1} mb={0.5}>
+                      <Typography variant="body2">
+                        {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">{u.email}</Typography>
                     </Box>
                   ))}
                 </Box>

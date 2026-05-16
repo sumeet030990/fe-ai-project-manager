@@ -80,8 +80,39 @@ export interface UserResponse {
   role: RoleResponse;
   company_id?: string;
   company?: CompanyResponse;
+  jira_account_id?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type JiraMatchStatus = "already_linked" | "email_match" | "new";
+
+export interface JiraUserPreview {
+  account_id: string;
+  display_name: string;
+  email?: string | null;
+  avatar_url?: string | null;
+  active: boolean;
+  match_status: JiraMatchStatus;
+  local_user_id?: string | null;
+}
+
+export interface JiraUserSyncRequest {
+  project_id: string;
+  account_ids: string[];
+  role_id: string;
+}
+
+export interface JiraUserSyncFailure {
+  account_id: string;
+  display_name: string;
+  error: string;
+}
+
+export interface JiraUserSyncResult {
+  linked: UserResponse[];
+  created: UserResponse[];
+  failed: JiraUserSyncFailure[];
 }
 
 export interface UserCreate {
@@ -245,6 +276,13 @@ export interface ModuleUpdate {
 // Story
 export type StoryStatus = "draft" | "review" | "approved" | "rejected" | "in_progress" | "done";
 
+export interface StoryAssignee {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email: string;
+}
+
 export interface StoryResponse {
   id: string;
   module_id: string;
@@ -257,6 +295,8 @@ export interface StoryResponse {
   is_ai_generated: boolean;
   azure_work_item_id?: number;
   jira_issue_key?: string;
+  assignee_id?: string | null;
+  assignee?: StoryAssignee | null;
   business_rules?: string;
   acceptance_criteria?: string;
   file_references?: string;
@@ -274,8 +314,10 @@ export interface JiraSyncFailure {
 export interface JiraSyncResult {
   fetched: number;
   imported: StoryResponse[];
+  updated: StoryResponse[];
   skipped: number;
   failed: JiraSyncFailure[];
+  users_linked: UserResponse[];
 }
 
 

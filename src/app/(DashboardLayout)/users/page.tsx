@@ -20,9 +20,10 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
-import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconLink, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
 import DashboardCard from "@/app/(DashboardLayout)/components/shared/DashboardCard";
@@ -179,9 +180,16 @@ export default function UsersPage() {
                     data?.items.map((user) => (
                       <TableRow key={user.id} hover>
                         <TableCell>
-                          <Typography variant="body2" fontWeight={500}>
-                            {getFullName(user)}
-                          </Typography>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Typography variant="body2" fontWeight={500}>
+                              {getFullName(user)}
+                            </Typography>
+                            {user.jira_account_id && (
+                              <Tooltip title="Linked to JIRA">
+                                <IconLink size={14} />
+                              </Tooltip>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{user.contact_no}</TableCell>
