@@ -50,3 +50,18 @@ export const getProjectUsers = async (
   });
   return data;
 };
+
+export const addProjectUsers = async (
+  projectId: string,
+  userIds: string[]
+): Promise<UserResponse[]> => {
+  const { data } = await axiosInstance.post(`/projects/${projectId}/users`, { user_ids: userIds });
+  return data;
+};
+
+export const removeProjectUser = async (
+  projectId: string,
+  userId: string
+): Promise<void> => {
+  await axiosInstance.delete(`/projects/${projectId}/users/${userId}`);
+};
