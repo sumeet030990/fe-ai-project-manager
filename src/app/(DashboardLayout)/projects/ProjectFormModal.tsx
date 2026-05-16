@@ -33,6 +33,7 @@ const emptyForm = {
   name: "",
   description: "",
   project_info: "",
+  jira_project_key: "",
   company_id: "",
   created_by: "",
   status: "active",
@@ -71,6 +72,7 @@ export default function ProjectFormModal({
         name: project.name,
         description: project.description ?? "",
         project_info: project.project_info ?? "",
+        jira_project_key: project.jira_project_key ?? "",
         company_id: project.company_id,
         created_by: project.created_by,
         status: project.status,
@@ -107,6 +109,7 @@ export default function ProjectFormModal({
         is_active: form.is_active,
         ...(form.description && { description: form.description }),
         ...(form.project_info && { project_info: form.project_info }),
+        jira_project_key: form.jira_project_key || undefined,
       };
       onSubmit(payload);
     } else {
@@ -116,6 +119,7 @@ export default function ProjectFormModal({
         created_by: form.created_by,
         ...(form.description && { description: form.description }),
         ...(form.project_info && { project_info: form.project_info }),
+        jira_project_key: form.jira_project_key || undefined,
       };
       onSubmit(payload);
     }
@@ -160,6 +164,21 @@ export default function ProjectFormModal({
               value={form.project_info}
               onChange={set("project_info")}
               helperText="Additional context used for AI story generation"
+            />
+          </Grid>
+
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              label="JIRA Project Key"
+              fullWidth
+              value={form.jira_project_key}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  jira_project_key: e.target.value.toUpperCase(),
+                }))
+              }
+              helperText="e.g. SCRUM, PM — used to sync stories with JIRA"
             />
           </Grid>
 

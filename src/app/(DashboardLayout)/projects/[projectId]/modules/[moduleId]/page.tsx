@@ -96,6 +96,7 @@ const emptyStoryForm = {
   description: "",
   order: 0,
   status: "draft" as StoryStatus,
+  priority: 0,
   story_points: 3 as number | "",
   business_rules: "",
   acceptance_criteria: "",
@@ -279,6 +280,7 @@ export default function ModuleDetailPage() {
       description: story.description ?? "",
       order: story.order,
       status: story.status,
+      priority: story.priority,
       story_points: story.story_points ?? "",
       business_rules: story.business_rules ?? "",
       acceptance_criteria: story.acceptance_criteria ?? "",
@@ -298,6 +300,7 @@ export default function ModuleDetailPage() {
           description: storyForm.description || undefined,
           order: storyForm.order,
           status: storyForm.status,
+          priority: storyForm.priority,
           story_points: storyForm.story_points !== "" ? storyForm.story_points : undefined,
           business_rules: storyForm.business_rules || undefined,
           acceptance_criteria: storyForm.acceptance_criteria || undefined,
@@ -311,6 +314,7 @@ export default function ModuleDetailPage() {
         description: storyForm.description || undefined,
         order: storyForm.order,
         status: storyForm.status,
+        priority: storyForm.priority,
         story_points: storyForm.story_points !== "" ? storyForm.story_points : undefined,
       });
     }
@@ -413,6 +417,9 @@ export default function ModuleDetailPage() {
                   <TableCell>
                     <Typography variant="subtitle2">Status</Typography>
                   </TableCell>
+                  <TableCell sx={{ width: 90 }}>
+                    <Typography variant="subtitle2">Priority</Typography>
+                  </TableCell>
                   <TableCell sx={{ width: 80 }}>
                     <Typography variant="subtitle2">Points</Typography>
                   </TableCell>
@@ -430,7 +437,7 @@ export default function ModuleDetailPage() {
               <TableBody>
                 {storiesData?.items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">
+                    <TableCell colSpan={8} align="center">
                       <Typography color="textSecondary" py={2}>
                         No stories yet. Add one manually or use AI generation.
                       </Typography>
@@ -469,6 +476,13 @@ export default function ModuleDetailPage() {
                           label={story.status.replace("_", " ")}
                           color={storyStatusColor(story.status)}
                           size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={`P${story.priority}`}
+                          size="small"
+                          variant="outlined"
                         />
                       </TableCell>
                       <TableCell>
@@ -648,7 +662,7 @@ export default function ModuleDetailPage() {
                 }
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 4 }}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -669,7 +683,21 @@ export default function ModuleDetailPage() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 4 }}>
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField
+                label="Priority"
+                type="number"
+                fullWidth
+                value={storyForm.priority}
+                onChange={(e) =>
+                  setStoryForm((p) => ({
+                    ...p,
+                    priority: parseInt(e.target.value) || 0,
+                  }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <FormControl fullWidth>
                 <InputLabel>Story Points</InputLabel>
                 <Select
@@ -693,7 +721,7 @@ export default function ModuleDetailPage() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 4 }}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <TextField
                 label="Order"
                 type="number"

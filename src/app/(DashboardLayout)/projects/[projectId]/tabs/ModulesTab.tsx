@@ -59,6 +59,7 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
     description: "",
     order: 0,
     status: "draft" as ModuleStatus,
+    priority: 0,
     created_by: "",
   });
 
@@ -108,7 +109,7 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
 
   const openAdd = () => {
     setEditingModule(null);
-    setModuleData({ name: "", description: "", order: 0, status: "draft", created_by: "" });
+    setModuleData({ name: "", description: "", order: 0, status: "draft", priority: 0, created_by: "" });
     setFormOpen(true);
   };
 
@@ -119,6 +120,7 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
       description: mod.description ?? "",
       order: mod.order,
       status: mod.status,
+      priority: mod.priority,
       created_by: mod.created_by,
     });
     setFormOpen(true);
@@ -134,6 +136,7 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
           description: moduleData.description || undefined,
           order: moduleData.order,
           status: moduleData.status,
+          priority: moduleData.priority,
         },
       });
     } else {
@@ -143,6 +146,7 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
         description: moduleData.description || undefined,
         order: moduleData.order,
         status: moduleData.status,
+        priority: moduleData.priority,
         created_by: moduleData.created_by,
       });
     }
@@ -177,11 +181,18 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
                     <Typography variant="subtitle1" fontWeight={600}>
                       {mod.name}
                     </Typography>
-                    <Chip
-                      label={mod.status.replace("_", " ")}
-                      color={moduleStatusColor(mod.status)}
-                      size="small"
-                    />
+                    <Box display="flex" gap={0.5}>
+                      <Chip
+                        label={`P${mod.priority}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                      <Chip
+                        label={mod.status.replace("_", " ")}
+                        color={moduleStatusColor(mod.status)}
+                        size="small"
+                      />
+                    </Box>
                   </Box>
                   {mod.description && (
                     <Typography variant="body2" color="textSecondary" mb={1}>
@@ -250,7 +261,7 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
                 onChange={(e) => setModuleData((p) => ({ ...p, description: e.target.value }))}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -268,7 +279,18 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Priority"
+                type="number"
+                fullWidth
+                value={moduleData.priority}
+                onChange={(e) =>
+                  setModuleData((p) => ({ ...p, priority: parseInt(e.target.value) || 0 }))
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 label="Order"
                 type="number"

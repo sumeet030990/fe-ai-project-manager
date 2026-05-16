@@ -124,6 +124,7 @@ export interface ProjectResponse {
   name: string;
   description?: string;
   project_info?: string;
+  jira_project_key?: string;
   status: string;
   is_active: boolean;
   company_id: string;
@@ -136,6 +137,7 @@ export interface ProjectCreate {
   name: string;
   description?: string;
   project_info?: string;
+  jira_project_key?: string;
   company_id: string;
   created_by: string;
 }
@@ -144,6 +146,7 @@ export interface ProjectUpdate {
   name?: string;
   description?: string;
   project_info?: string;
+  jira_project_key?: string;
   status?: string;
   is_active?: boolean;
 }
@@ -217,6 +220,7 @@ export interface ModuleResponse {
   description?: string;
   order: number;
   status: ModuleStatus;
+  priority: number;
   created_at: string;
   updated_at: string;
 }
@@ -226,6 +230,7 @@ export interface ModuleCreate {
   description?: string;
   order?: number;
   status?: ModuleStatus;
+  priority?: number;
   created_by: string;
 }
 
@@ -234,6 +239,7 @@ export interface ModuleUpdate {
   description?: string;
   order?: number;
   status?: ModuleStatus;
+  priority?: number;
 }
 
 // Story
@@ -246,6 +252,7 @@ export interface StoryResponse {
   description?: string;
   order: number;
   status: StoryStatus;
+  priority: number;
   story_points?: number;
   is_ai_generated: boolean;
   azure_work_item_id?: number;
@@ -277,6 +284,7 @@ export interface StoryCreate {
   description?: string;
   order?: number;
   status?: StoryStatus;
+  priority?: number;
   story_points?: number;
 }
 
@@ -285,6 +293,7 @@ export interface StoryUpdate {
   description?: string;
   order?: number;
   status?: StoryStatus;
+  priority?: number;
   story_points?: number;
   business_rules?: string;
   acceptance_criteria?: string;
