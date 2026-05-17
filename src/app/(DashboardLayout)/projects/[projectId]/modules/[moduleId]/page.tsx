@@ -47,6 +47,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
+import AIModelSelector from "@/app/(DashboardLayout)/components/shared/AIModelSelector";
 import { getModule } from "@/services/modules";
 import { getProject } from "@/services/projects";
 import {
@@ -120,8 +121,10 @@ export default function ModuleDetailPage() {
   const [deleteTarget, setDeleteTarget] = useState<StoryResponse | null>(null);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generateContext, setGenerateContext] = useState("");
+  const [generateConfigId, setGenerateConfigId] = useState("");
   const [refineTarget, setRefineTarget] = useState<StoryResponse | null>(null);
   const [refineContext, setRefineContext] = useState("");
+  const [refineConfigId, setRefineConfigId] = useState("");
   const [storyForm, setStoryForm] = useState<StoryForm>(emptyStoryForm);
   const [snack, setSnack] = useState<Snack>({
     open: false,
@@ -191,11 +194,13 @@ export default function ModuleDetailPage() {
     mutationFn: () =>
       generateStories(projectId, moduleId, {
         context: generateContext || undefined,
+        config_id: generateConfigId || undefined,
       }),
     onSuccess: (newStories) => {
       queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
       setGenerateOpen(false);
       setGenerateContext("");
+      setGenerateConfigId("");
       toast(
         `Generated ${newStories.length} story${newStories.length !== 1 ? "s" : ""} successfully`,
         "success"
@@ -208,11 +213,13 @@ export default function ModuleDetailPage() {
     mutationFn: () =>
       refineStory(moduleId, refineTarget!.id, {
         context: refineContext || undefined,
+        config_id: refineConfigId || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
       setRefineTarget(null);
       setRefineContext("");
+      setRefineConfigId("");
       toast("Story refined successfully", "success");
     },
     onError: () => toast("Failed to refine story", "error"),
@@ -847,10 +854,17 @@ export default function ModuleDetailPage() {
         </DialogTitle>
         <DialogContent dividers>
           <Typography variant="body2" color="textSecondary" mb={2}>
-            Claude will generate user stories based on the project info, tech
+            AI will generate user stories based on the project info, tech
             stack, and this module&apos;s context. Optionally provide extra context
             below.
           </Typography>
+          <Box mb={2}>
+            <AIModelSelector
+              projectId={projectId}
+              value={generateConfigId}
+              onChange={setGenerateConfigId}
+            />
+          </Box>
           <TextField
             label="Additional Context (optional)"
             fullWidth
@@ -957,9 +971,16 @@ export default function ModuleDetailPage() {
             )}
           </Paper>
           <Typography variant="body2" color="textSecondary" mb={2}>
-            Claude will enrich this story with business rules, acceptance
+            AI will enrich this story with business rules, acceptance
             criteria, file references, and URLs. Add context below to guide the refinement.
           </Typography>
+          <Box mb={2}>
+            <AIModelSelector
+              projectId={projectId}
+              value={refineConfigId}
+              onChange={setRefineConfigId}
+            />
+          </Box>
           <TextField
             label="Additional Context (optional)"
             fullWidth

@@ -46,6 +46,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
+import AIModelSelector from "@/app/(DashboardLayout)/components/shared/AIModelSelector";
 import { getModule } from "@/services/modules";
 import { getProject } from "@/services/projects";
 import { getStory } from "@/services/stories";
@@ -108,6 +109,7 @@ export default function TestCasesPage() {
   const [deleteTarget, setDeleteTarget] = useState<TestCaseResponse | null>(null);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generateContext, setGenerateContext] = useState("");
+  const [generateConfigId, setGenerateConfigId] = useState("");
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [promptPreviewOpen, setPromptPreviewOpen] = useState(false);
   const [selectedTechStackIds, setSelectedTechStackIds] = useState<string[]>([]);
@@ -189,6 +191,7 @@ export default function TestCasesPage() {
       queryClient.invalidateQueries({ queryKey: ["test-cases", moduleId, storyId] });
       setGenerateOpen(false);
       setGenerateContext("");
+      setGenerateConfigId("");
       toast(
         `Generated ${newTcs.length} test case${newTcs.length !== 1 ? "s" : ""} successfully`,
         "success"
@@ -689,6 +692,13 @@ export default function TestCasesPage() {
             test cases based on the story&apos;s acceptance criteria and business rules. Optionally
             add extra context below.
           </Typography>
+          <Box mb={2}>
+            <AIModelSelector
+              projectId={projectId}
+              value={generateConfigId}
+              onChange={setGenerateConfigId}
+            />
+          </Box>
           <TextField
             label="Additional Context (optional)"
             fullWidth
@@ -707,7 +717,7 @@ export default function TestCasesPage() {
             startIcon={
               generateMutation.isPending ? <CircularProgress size={16} /> : <IconRobot size={16} />
             }
-            onClick={() => generateMutation.mutate({ context: generateContext || undefined })}
+            onClick={() => generateMutation.mutate({ context: generateContext || undefined, config_id: generateConfigId || undefined })}
             disabled={generateMutation.isPending}
           >
             {generateMutation.isPending ? "Generating..." : "Generate Test Cases"}

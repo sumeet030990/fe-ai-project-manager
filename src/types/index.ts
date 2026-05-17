@@ -85,6 +85,33 @@ export interface UserResponse {
   updated_at: string;
 }
 
+export type AIProvider = "claude" | "openai" | "groq" | "deepseek" | "other";
+
+export interface ProjectAIConfigResponse {
+  id: string;
+  project_id: string;
+  provider: AIProvider;
+  api_key_masked: string;
+  model_name: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectAIConfigCreate {
+  provider: AIProvider;
+  api_key: string;
+  model_name: string;
+  is_default: boolean;
+}
+
+export interface ProjectAIConfigUpdate {
+  provider?: AIProvider;
+  api_key?: string;
+  model_name?: string;
+  is_default?: boolean;
+}
+
 export type JiraMatchStatus = "already_linked" | "email_match" | "new";
 
 export interface JiraUserPreview {
@@ -345,10 +372,12 @@ export interface StoryUpdate {
 
 export interface StoryGenerateRequest {
   context?: string;
+  config_id?: string;
 }
 
 export interface StoryRefineRequest {
   context?: string;
+  config_id?: string;
 }
 
 // Test Case
@@ -388,6 +417,7 @@ export interface TestCaseUpdate {
 
 export interface TestCaseGenerateRequest {
   context?: string;
+  config_id?: string;
 }
 
 // Prompt

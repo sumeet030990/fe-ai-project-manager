@@ -15,17 +15,19 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
 import { getProject } from "@/services/projects";
+import AIConfigTab from "./tabs/AIConfigTab";
 import ModulesTab from "./tabs/ModulesTab";
 import TeamTab from "./tabs/TeamTab";
 import TechStacksTab from "./tabs/TechStacksTab";
 
-const TABS = ["modules", "team", "techstacks"] as const;
+const TABS = ["modules", "team", "techstacks", "aiconfig"] as const;
 type TabSlug = (typeof TABS)[number];
 
 const TAB_LABELS: Record<TabSlug, string> = {
   modules: "Modules",
   team: "Team",
   techstacks: "Tech Stacks & Plugins",
+  aiconfig: "AI Config",
 };
 
 export default function ProjectDetailPage() {
@@ -114,6 +116,7 @@ export default function ProjectDetailPage() {
         {activeTab === "modules" && <ModulesTab projectId={projectId} />}
         {activeTab === "team" && <TeamTab projectId={projectId} />}
         {activeTab === "techstacks" && <TechStacksTab projectId={projectId} />}
+        {activeTab === "aiconfig" && <AIConfigTab projectId={projectId} />}
       </Box>
     </PageContainer>
   );
