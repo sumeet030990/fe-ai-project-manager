@@ -2,6 +2,7 @@
 import React, { useCallback } from "react";
 import {
   Box,
+  Button,
   Chip,
   CircularProgress,
   IconButton,
@@ -10,7 +11,7 @@ import {
   Tabs,
   Typography,
 } from "@mui/material";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconLayoutKanban } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
@@ -101,6 +102,15 @@ export default function ProjectDetailPage() {
           variant="outlined"
           size="small"
         />
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<IconLayoutKanban size={15} />}
+          onClick={() => router.push(`/projects/${projectId}/sprints`)}
+          color="primary"
+        >
+          Sprint Board
+        </Button>
       </Box>
 
       {/* Tabs */}

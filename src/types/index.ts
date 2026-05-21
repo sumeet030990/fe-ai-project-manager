@@ -183,6 +183,7 @@ export interface ProjectResponse {
   description?: string;
   project_info?: string;
   jira_project_key?: string;
+  jira_board_id?: number | null;
   status: string;
   is_active: boolean;
   company_id: string;
@@ -196,6 +197,7 @@ export interface ProjectCreate {
   description?: string;
   project_info?: string;
   jira_project_key?: string;
+  jira_board_id?: number;
   company_id: string;
   created_by: string;
 }
@@ -205,6 +207,7 @@ export interface ProjectUpdate {
   description?: string;
   project_info?: string;
   jira_project_key?: string;
+  jira_board_id?: number | null;
   status?: string;
   is_active?: boolean;
 }
@@ -418,6 +421,93 @@ export interface TestCaseUpdate {
 export interface TestCaseGenerateRequest {
   context?: string;
   config_id?: string;
+}
+
+// Sprint
+export type SprintStatus = "planning" | "active" | "completed";
+
+export interface SprintResponse {
+  id: string;
+  project_id: string;
+  name: string;
+  goal?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  status: SprintStatus;
+  jira_sprint_id?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SprintCreate {
+  name: string;
+  goal?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface SprintUpdate {
+  name?: string;
+  goal?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: SprintStatus;
+}
+
+export interface SprintStoriesRequest {
+  story_ids: string[];
+}
+
+export interface BacklogModuleGroup {
+  module_id: string;
+  module_name: string;
+  jira_epic_key?: string | null;
+  stories: StoryResponse[];
+}
+
+export interface BacklogResponse {
+  modules: BacklogModuleGroup[];
+  total_stories: number;
+  total_points: number;
+}
+
+export interface SprintBoardColumns {
+  todo: StoryResponse[];
+  in_progress: StoryResponse[];
+  in_review: StoryResponse[];
+  done: StoryResponse[];
+}
+
+export interface ActiveSprintResponse {
+  sprint: SprintResponse;
+  columns: SprintBoardColumns;
+  total_points: number;
+  completed_points: number;
+}
+
+export interface SprintSyncFailure {
+  jira_sprint_id: number;
+  name: string;
+  error: string;
+}
+
+export interface SprintSyncResult {
+  fetched: number;
+  created: SprintResponse[];
+  updated: SprintResponse[];
+  failed: SprintSyncFailure[];
+}
+
+export interface SprintAIPlanRequest {
+  capacity: number;
+  context?: string;
+  config_id?: string;
+}
+
+export interface SprintAIPlanResult {
+  selected_stories: StoryResponse[];
+  total_points: number;
+  reasoning: string;
 }
 
 // Prompt
