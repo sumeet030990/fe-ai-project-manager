@@ -1,9 +1,11 @@
 "use client";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Collapse,
@@ -216,7 +218,10 @@ export default function SprintPlanningPage() {
   const [aiCapacity, setAiCapacity] = useState("30");
   const [aiContext, setAiContext] = useState("");
   const [aiConfigId, setAiConfigId] = useState("");
+  const [aiModuleIds, setAiModuleIds] = useState<string[]>([]);
   const [aiResult, setAiResult] = useState<SprintAIPlanResult | null>(null);
+  const [aiSelectedIds, setAiSelectedIds] = useState<string[]>([]);
+  const [aiAddSectionOpen, setAiAddSectionOpen] = useState(false);
   const [syncResult, setSyncResult] = useState<SprintSyncResult | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedPlanning, setExpandedPlanning] = useState<Record<string, boolean>>({});
@@ -383,11 +388,15 @@ export default function SprintPlanningPage() {
         capacity: parseInt(aiCapacity) || 30,
         context: aiContext || undefined,
         config_id: aiConfigId || undefined,
+        module_ids: aiModuleIds.length > 0 ? aiModuleIds : undefined,
       }),
     onSuccess: (result) => {
       setAiPlanSprintId(aiPlanTargetSprint!.id);
       setAiPlanTargetSprint(null);
+      setAiModuleIds([]);
       setAiResult(result);
+      setAiSelectedIds(result.selected_stories.map((s) => s.id));
+      setAiAddSectionOpen(false);
     },
     onError: () => toast("AI planning failed", "error"),
   });
@@ -395,12 +404,14 @@ export default function SprintPlanningPage() {
   const applyAiPlanMutation = useMutation({
     mutationFn: () =>
       addStoriesToSprint(projectId, aiPlanSprintId!, {
-        story_ids: aiResult!.selected_stories.map((s) => s.id),
+        story_ids: aiSelectedIds,
       }),
     onSuccess: () => {
       invalidateAll();
-      const count = aiResult?.selected_stories.length ?? 0;
+      const count = aiSelectedIds.length;
       setAiResult(null);
+      setAiSelectedIds([]);
+      setAiAddSectionOpen(false);
       setAiPlanSprintId(null);
       toast(`${count} stories added to sprint`, "success");
     },
@@ -410,6 +421,47 @@ export default function SprintPlanningPage() {
   // ── Render helpers ─────────────────────────────────────────────────────────
 
   const isLoading = sprintsLoading || backlogLoading;
+
+  // Build a flat lookup of all stories available for AI result (AI-selected + full backlog)
+  const allStoryById = useMemo(() => {
+    const map: Record<string, StoryResponse> = {};
+    aiResult?.selected_stories.forEach((s) => { map[s.id] = s; });
+    backlog?.modules.forEach((m) => m.stories.forEach((s) => { map[s.id] = s; }));
+    return map;
+  }, [aiResult, backlog]);
+
+  const moduleNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    backlog?.modules.forEach((m) => { map[m.module_id] = m.module_name; });
+    return map;
+  }, [backlog]);
+
+  // Group currently selected stories by module for the result dialog
+  const selectedStoriesByModule = useMemo(() => {
+    const groups: Record<string, { module_name: string; stories: StoryResponse[] }> = {};
+    aiSelectedIds.forEach((id) => {
+      const s = allStoryById[id];
+      if (!s) return;
+      const mName = moduleNameById[s.module_id] ?? "Unknown Module";
+      if (!groups[s.module_id]) groups[s.module_id] = { module_name: mName, stories: [] };
+      groups[s.module_id].stories.push(s);
+    });
+    return Object.values(groups);
+  }, [aiSelectedIds, allStoryById, moduleNameById]);
+
+  // Backlog stories not yet in the selection, grouped by module
+  const unselectedBacklogByModule = useMemo(() => {
+    const selected = new Set(aiSelectedIds);
+    return (backlog?.modules ?? [])
+      .map((m) => ({ ...m, stories: m.stories.filter((s) => !selected.has(s.id)) }))
+      .filter((m) => m.stories.length > 0);
+  }, [aiSelectedIds, backlog]);
+
+  // Dynamic total points for current selection
+  const selectedTotalPoints = useMemo(
+    () => aiSelectedIds.reduce((sum, id) => sum + (allStoryById[id]?.story_points ?? 0), 0),
+    [aiSelectedIds, allStoryById],
+  );
 
   const totalColumns = activeBoard
     ? COLUMN_CONFIG.reduce((acc, col) => acc + (activeBoard.columns[col.key]?.length ?? 0), 0)
@@ -1037,7 +1089,12 @@ export default function SprintPlanningPage() {
       </Dialog>
 
       {/* ── AI Plan Dialog ── */}
-      <Dialog open={!!aiPlanTargetSprint} onClose={() => setAiPlanTargetSprint(null)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={!!aiPlanTargetSprint}
+        onClose={() => { setAiPlanTargetSprint(null); setAiModuleIds([]); }}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
           <Box display="flex" alignItems="center" gap={1}>
             <IconRobot size={20} />
@@ -1068,6 +1125,37 @@ export default function SprintPlanningPage() {
             onChange={(e) => setAiCapacity(e.target.value)}
             sx={{ mb: 2 }}
           />
+          {backlog && backlog.modules.length > 0 && (
+            <Autocomplete
+              multiple
+              options={backlog.modules}
+              getOptionLabel={(opt) => opt.module_name}
+              value={backlog.modules.filter((m) => aiModuleIds.includes(m.module_id))}
+              onChange={(_, selected) => setAiModuleIds(selected.map((m) => m.module_id))}
+              disableCloseOnSelect
+              renderOption={(props, option, { selected }) => (
+                <li {...props}>
+                  <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
+                  <Box>
+                    <Typography variant="body2">{option.module_name}</Typography>
+                    {option.jira_epic_key && (
+                      <Typography variant="caption" color="textSecondary">{option.jira_epic_key}</Typography>
+                    )}
+                  </Box>
+                </li>
+              )}
+              slotProps={{ chip: { size: "small", color: "secondary", variant: "outlined" } as object }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Focus Modules (optional)"
+                  placeholder={aiModuleIds.length === 0 ? "All modules — pick one or more to focus AI" : ""}
+                  helperText="AI will prioritize stories from selected modules"
+                />
+              )}
+              sx={{ mb: 2 }}
+            />
+          )}
           <TextField
             label="Additional Context (optional)"
             fullWidth
@@ -1079,7 +1167,7 @@ export default function SprintPlanningPage() {
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setAiPlanTargetSprint(null)}>Cancel</Button>
+          <Button onClick={() => { setAiPlanTargetSprint(null); setAiModuleIds([]); }}>Cancel</Button>
           <Button
             variant="contained"
             color="secondary"
@@ -1093,7 +1181,12 @@ export default function SprintPlanningPage() {
       </Dialog>
 
       {/* ── AI Plan Result Dialog ── */}
-      <Dialog open={!!aiResult} onClose={() => setAiResult(null)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={!!aiResult}
+        onClose={() => { setAiResult(null); setAiSelectedIds([]); setAiAddSectionOpen(false); }}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>
           <Box display="flex" alignItems="center" gap={1}>
             <IconRobot size={20} />
@@ -1103,46 +1196,242 @@ export default function SprintPlanningPage() {
         <DialogContent dividers>
           {aiResult && (
             <>
-              <Box display="flex" gap={1} mb={2}>
-                <Chip label={`${aiResult.selected_stories.length} stories`} color="primary" size="small" />
-                <Chip label={`${aiResult.total_points} pts total`} color="success" size="small" />
+              {/* Summary chips */}
+              <Box display="flex" gap={1} mb={2} flexWrap="wrap">
+                <Chip label={`${aiSelectedIds.length} stories selected`} color="primary" size="small" />
+                <Chip label={`${selectedTotalPoints} pts total`} color="success" size="small" />
+                {aiSelectedIds.length !== aiResult.selected_stories.length && (
+                  <Chip
+                    label={`AI suggested ${aiResult.selected_stories.length}`}
+                    variant="outlined"
+                    size="small"
+                    color="secondary"
+                  />
+                )}
               </Box>
+
+              {/* AI Reasoning */}
               {aiResult.reasoning && (
-                <Paper variant="outlined" sx={{ p: 1.5, mb: 2, bgcolor: "action.hover" }}>
+                <Paper variant="outlined" sx={{ p: 1.5, mb: 2.5, bgcolor: "action.hover" }}>
                   <Typography variant="caption" color="textSecondary" fontWeight={600} display="block" mb={0.5}>
                     AI Reasoning
                   </Typography>
                   <Typography variant="body2">{aiResult.reasoning}</Typography>
                 </Paper>
               )}
-              <Typography variant="subtitle2" mb={1}>Selected Stories</Typography>
-              {aiResult.selected_stories.map((s) => (
-                <Box key={s.id} display="flex" alignItems="center" gap={1} mb={0.75} p={1}
-                  sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
-                  {s.jira_issue_key && (
-                    <Chip label={s.jira_issue_key} size="small" color="info" variant="outlined"
-                      icon={<IconTicket size={10} />} sx={{ fontSize: "0.6rem" }} />
-                  )}
-                  <Typography variant="body2" flexGrow={1}>{s.title}</Typography>
-                  {s.story_points != null && (
-                    <Chip label={`${s.story_points}pt`} size="small" color="primary" variant="outlined"
-                      sx={{ fontSize: "0.6rem", flexShrink: 0 }} />
+
+              {/* Selected stories grouped by module */}
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                Selected Stories
+              </Typography>
+              {selectedStoriesByModule.length === 0 ? (
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 2, fontStyle: "italic" }}>
+                  No stories selected. Add stories from the backlog below.
+                </Typography>
+              ) : (
+                selectedStoriesByModule.map((group) => (
+                  <Box key={group.module_name} mb={1.5}>
+                    {/* Module header */}
+                    <Box display="flex" alignItems="center" gap={0.75} mb={0.75}>
+                      <IconPackage size={13} color="#5D87FF" />
+                      <Chip
+                        label={group.module_name}
+                        size="small"
+                        color="secondary"
+                        sx={{ fontSize: "0.65rem", height: 20, fontWeight: 700 }}
+                      />
+                      <Chip
+                        label={`${group.stories.length} stories · ${group.stories.reduce((s, st) => s + (st.story_points ?? 0), 0)} pts`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: "0.6rem", height: 18 }}
+                      />
+                    </Box>
+                    {/* Story rows */}
+                    {group.stories.map((s) => (
+                      <Box
+                        key={s.id}
+                        display="flex"
+                        alignItems="center"
+                        gap={1}
+                        mb={0.5}
+                        p={1}
+                        sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1,
+                          "&:hover": { bgcolor: "action.hover" },
+                        }}
+                      >
+                        {s.jira_issue_key && (
+                          <Chip
+                            label={s.jira_issue_key}
+                            size="small"
+                            color="info"
+                            variant="outlined"
+                            icon={<IconTicket size={10} />}
+                            sx={{ fontSize: "0.6rem", flexShrink: 0 }}
+                          />
+                        )}
+                        <Typography variant="body2" flexGrow={1} sx={{ minWidth: 0 }}>
+                          {s.title}
+                        </Typography>
+                        {s.story_points != null && (
+                          <Chip
+                            label={`${s.story_points}pt`}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            sx={{ fontSize: "0.6rem", flexShrink: 0 }}
+                          />
+                        )}
+                        <Tooltip title="Remove from selection">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => setAiSelectedIds((prev) => prev.filter((id) => id !== s.id))}
+                            sx={{ flexShrink: 0 }}
+                          >
+                            <IconX size={13} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    ))}
+                  </Box>
+                ))
+              )}
+
+              {/* Add more stories section */}
+              <Box
+                mt={2}
+                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden" }}
+              >
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  px={1.5}
+                  py={1}
+                  gap={1}
+                  sx={{ cursor: "pointer", bgcolor: "grey.50", "&:hover": { bgcolor: "action.hover" } }}
+                  onClick={() => setAiAddSectionOpen((v) => !v)}
+                >
+                  {aiAddSectionOpen ? <IconChevronDown size={15} /> : <IconChevronRight size={15} />}
+                  <IconPlus size={14} color="#5D87FF" />
+                  <Typography variant="subtitle2" fontWeight={700} flexGrow={1}>
+                    Add More Stories
+                  </Typography>
+                  {unselectedBacklogByModule.length > 0 && (
+                    <Chip
+                      label={`${unselectedBacklogByModule.reduce((n, m) => n + m.stories.length, 0)} available`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: "0.6rem", height: 18 }}
+                    />
                   )}
                 </Box>
-              ))}
+                <Collapse in={aiAddSectionOpen}>
+                  <Divider />
+                  {unselectedBacklogByModule.length === 0 ? (
+                    <Box px={2} py={1.5}>
+                      <Typography variant="body2" color="textSecondary">
+                        All backlog stories are already selected.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Box px={1.5} py={1}>
+                      {unselectedBacklogByModule.map((group) => (
+                        <Box key={group.module_id} mb={1.5}>
+                          {/* Module header */}
+                          <Box display="flex" alignItems="center" gap={0.75} mb={0.5}>
+                            <IconPackage size={13} color="#5D87FF" />
+                            <Chip
+                              label={group.module_name}
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                              sx={{ fontSize: "0.65rem", height: 20, fontWeight: 700 }}
+                            />
+                            {group.jira_epic_key && (
+                              <Chip
+                                label={group.jira_epic_key}
+                                size="small"
+                                color="info"
+                                variant="outlined"
+                                icon={<IconTicket size={10} />}
+                                sx={{ fontSize: "0.6rem", height: 18 }}
+                              />
+                            )}
+                          </Box>
+                          {/* Unselected story rows */}
+                          {group.stories.map((s) => (
+                            <Box
+                              key={s.id}
+                              display="flex"
+                              alignItems="center"
+                              gap={1}
+                              mb={0.5}
+                              p={1}
+                              sx={{
+                                border: "1px dashed",
+                                borderColor: "divider",
+                                borderRadius: 1,
+                                "&:hover": { bgcolor: "action.hover" },
+                              }}
+                            >
+                              {s.jira_issue_key && (
+                                <Chip
+                                  label={s.jira_issue_key}
+                                  size="small"
+                                  color="info"
+                                  variant="outlined"
+                                  icon={<IconTicket size={10} />}
+                                  sx={{ fontSize: "0.6rem", flexShrink: 0 }}
+                                />
+                              )}
+                              <Typography variant="body2" flexGrow={1} color="textSecondary" sx={{ minWidth: 0 }}>
+                                {s.title}
+                              </Typography>
+                              {s.story_points != null && (
+                                <Chip
+                                  label={`${s.story_points}pt`}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ fontSize: "0.6rem", flexShrink: 0 }}
+                                />
+                              )}
+                              <Tooltip title="Add to selection">
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => setAiSelectedIds((prev) => [...prev, s.id])}
+                                  sx={{ flexShrink: 0 }}
+                                >
+                                  <IconPlus size={13} />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          ))}
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Collapse>
+              </Box>
             </>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setAiResult(null)}>Discard</Button>
+          <Button onClick={() => { setAiResult(null); setAiSelectedIds([]); setAiAddSectionOpen(false); }}>
+            Discard
+          </Button>
           <Button
             variant="contained"
             color="primary"
             startIcon={applyAiPlanMutation.isPending ? <CircularProgress size={16} /> : <IconPlus size={16} />}
             onClick={() => applyAiPlanMutation.mutate()}
-            disabled={applyAiPlanMutation.isPending}
+            disabled={applyAiPlanMutation.isPending || aiSelectedIds.length === 0}
           >
-            {applyAiPlanMutation.isPending ? "Adding..." : "Add to Sprint"}
+            {applyAiPlanMutation.isPending ? "Adding..." : `Add ${aiSelectedIds.length} Stories to Sprint`}
           </Button>
         </DialogActions>
       </Dialog>

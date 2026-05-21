@@ -502,6 +502,7 @@ export interface SprintAIPlanRequest {
   capacity: number;
   context?: string;
   config_id?: string;
+  module_ids?: string[];
 }
 
 export interface SprintAIPlanResult {
