@@ -54,12 +54,11 @@ export const deleteStory = async (featureId: string, storyId: string, deleteRemo
 };
 
 export const generateStories = async (
-  projectId: string,
   featureId: string,
   payload: StoryGenerateRequest = {}
 ): Promise<StoryResponse[]> => {
   const { data } = await axiosInstance.post(
-    `/projects/${projectId}/features/${featureId}/generate-stories`,
+    `/features/${featureId}/generate-stories`,
     payload
   );
   return data;

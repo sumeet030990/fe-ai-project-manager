@@ -270,12 +270,47 @@ export interface ProjectPluginUpdate {
   description?: string;
 }
 
+// Epic
+export type EpicStatus = "draft" | "ready" | "in_progress" | "done";
+
+export interface EpicResponse {
+  id: string;
+  project_id: string;
+  created_by: string;
+  name: string;
+  description?: string;
+  order: number;
+  status: EpicStatus;
+  priority: number;
+  jira_epic_key?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EpicCreate {
+  name: string;
+  description?: string;
+  order?: number;
+  status?: EpicStatus;
+  priority?: number;
+  created_by: string;
+}
+
+export interface EpicUpdate {
+  name?: string;
+  description?: string;
+  order?: number;
+  status?: EpicStatus;
+  priority?: number;
+  jira_epic_key?: string | null;
+}
+
 // Feature
 export type FeatureStatus = "draft" | "ready" | "in_progress" | "done";
 
 export interface FeatureResponse {
   id: string;
-  project_id: string;
+  epic_id: string;
   created_by: string;
   name: string;
   description?: string;

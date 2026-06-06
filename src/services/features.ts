@@ -7,46 +7,50 @@ import {
 } from "@/types";
 
 export const getFeatures = async (
-  projectId: string,
+  epicId: string,
   page = 1,
   size = 20
 ): Promise<PaginatedResponse<FeatureResponse>> => {
-  const { data } = await axiosInstance.get(`/projects/${projectId}/features`, {
+  const { data } = await axiosInstance.get(`/epics/${epicId}/features`, {
     params: { page, size },
   });
   return data;
 };
 
 export const getFeature = async (
-  projectId: string,
+  epicId: string,
   featureId: string
 ): Promise<FeatureResponse> => {
-  const { data } = await axiosInstance.get(`/projects/${projectId}/features/${featureId}`);
+  const { data } = await axiosInstance.get(`/epics/${epicId}/features/${featureId}`);
   return data;
 };
 
 export const createFeature = async (
-  projectId: string,
+  epicId: string,
   payload: FeatureCreate
 ): Promise<FeatureResponse> => {
-  const { data } = await axiosInstance.post(`/projects/${projectId}/features`, payload);
+  const { data } = await axiosInstance.post(`/epics/${epicId}/features`, payload);
   return data;
 };
 
 export const updateFeature = async (
-  projectId: string,
+  epicId: string,
   featureId: string,
   payload: FeatureUpdate
 ): Promise<FeatureResponse> => {
   const { data } = await axiosInstance.patch(
-    `/projects/${projectId}/features/${featureId}`,
+    `/epics/${epicId}/features/${featureId}`,
     payload
   );
   return data;
 };
 
-export const deleteFeature = async (projectId: string, featureId: string, deleteRemote = false): Promise<void> => {
-  await axiosInstance.delete(`/projects/${projectId}/features/${featureId}`, {
+export const deleteFeature = async (
+  epicId: string,
+  featureId: string,
+  deleteRemote = false
+): Promise<void> => {
+  await axiosInstance.delete(`/epics/${epicId}/features/${featureId}`, {
     params: { delete_remote: deleteRemote },
   });
 };

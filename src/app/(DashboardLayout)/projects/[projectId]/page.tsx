@@ -18,15 +18,15 @@ import PageContainer from "@/app/(DashboardLayout)/components/container/PageCont
 import { getProject } from "@/services/projects";
 import AIConfigTab from "./tabs/AIConfigTab";
 import BRDAnalysisTab from "./tabs/BRDAnalysisTab";
-import FeaturesTab from "./tabs/FeaturesTab";
+import EpicsTab from "./tabs/EpicsTab";
 import TeamTab from "./tabs/TeamTab";
 import TechStacksTab from "./tabs/TechStacksTab";
 
-const TABS = ["features", "team", "techstacks", "aiconfig", "brd"] as const;
+const TABS = ["epics", "team", "techstacks", "aiconfig", "brd"] as const;
 type TabSlug = (typeof TABS)[number];
 
 const TAB_LABELS: Record<TabSlug, string> = {
-  features: "Features",
+  epics: "Epics",
   team: "Team",
   techstacks: "Tech Stacks & Plugins",
   aiconfig: "AI Config",
@@ -40,7 +40,7 @@ export default function ProjectDetailPage() {
   const projectId = params.projectId as string;
 
   const rawTab = searchParams.get("tab") as TabSlug | null;
-  const activeTab: TabSlug = rawTab && TABS.includes(rawTab) ? rawTab : "features";
+  const activeTab: TabSlug = rawTab && TABS.includes(rawTab) ? rawTab : "epics";
   const tabIndex = TABS.indexOf(activeTab);
 
   const handleTabChange = useCallback(
@@ -125,7 +125,7 @@ export default function ProjectDetailPage() {
       </Paper>
 
       <Box>
-        {activeTab === "features" && <FeaturesTab projectId={projectId} />}
+        {activeTab === "epics" && <EpicsTab projectId={projectId} />}
         {activeTab === "team" && <TeamTab projectId={projectId} />}
         {activeTab === "techstacks" && <TechStacksTab projectId={projectId} />}
         {activeTab === "aiconfig" && <AIConfigTab projectId={projectId} />}
