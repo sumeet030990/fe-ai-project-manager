@@ -1,6 +1,8 @@
 import axiosInstance from "@/lib/axios";
 import {
   FeatureCreate,
+  FeatureGenerateRequest,
+  FeatureRefineRequest,
   FeatureResponse,
   FeatureUpdate,
   PaginatedResponse,
@@ -53,4 +55,24 @@ export const deleteFeature = async (
   await axiosInstance.delete(`/epics/${epicId}/features/${featureId}`, {
     params: { delete_remote: deleteRemote },
   });
+};
+
+export const generateFeatures = async (
+  epicId: string,
+  payload: FeatureGenerateRequest = {}
+): Promise<FeatureResponse[]> => {
+  const { data } = await axiosInstance.post(`/epics/${epicId}/features/generate`, payload);
+  return data;
+};
+
+export const refineFeature = async (
+  epicId: string,
+  featureId: string,
+  payload: FeatureRefineRequest = {}
+): Promise<FeatureResponse> => {
+  const { data } = await axiosInstance.post(
+    `/epics/${epicId}/features/${featureId}/refine`,
+    payload
+  );
+  return data;
 };

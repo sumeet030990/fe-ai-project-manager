@@ -12,23 +12,42 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   Grid,
   IconButton,
   InputLabel,
   MenuItem,
+  Paper,
   Select,
   Snackbar,
   TablePagination,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
-import { IconArrowLeft, IconExternalLink, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconExternalLink,
+  IconPencil,
+  IconPlus,
+  IconRobot,
+  IconSparkles,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
+import AIModelSelector from "@/app/(DashboardLayout)/components/shared/AIModelSelector";
 import { getEpic } from "@/services/epics";
-import { createFeature, deleteFeature, getFeatures, updateFeature } from "@/services/features";
+import {
+  createFeature,
+  deleteFeature,
+  generateFeatures,
+  getFeatures,
+  refineFeature,
+  updateFeature,
+} from "@/services/features";
 import { getProject } from "@/services/projects";
 import { getUsers } from "@/services/users";
 import { FeatureCreate, FeatureResponse, FeatureStatus, FeatureUpdate } from "@/types";
@@ -56,6 +75,12 @@ export default function EpicDetailPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingFeature, setEditingFeature] = useState<FeatureResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FeatureResponse | null>(null);
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [generateContext, setGenerateContext] = useState("");
+  const [generateConfigId, setGenerateConfigId] = useState("");
+  const [refineTarget, setRefineTarget] = useState<FeatureResponse | null>(null);
+  const [refineContext, setRefineContext] = useState("");
+  const [refineConfigId, setRefineConfigId] = useState("");
   const [snack, setSnack] = useState<Snack>({ open: false, message: "", severity: "success" });
   const toast = (message: string, severity: "success" | "error") =>
     setSnack({ open: true, message, severity });
@@ -67,6 +92,8 @@ export default function EpicDetailPage() {
     status: "draft" as FeatureStatus,
     priority: 0,
     created_by: "",
+    business_rules: "",
+    acceptance_criteria: "",
   });
 
   const { data: project } = useQuery({
@@ -126,9 +153,44 @@ export default function EpicDetailPage() {
     onError: () => toast("Failed to delete feature", "error"),
   });
 
+  const generateMutation = useMutation({
+    mutationFn: () =>
+      generateFeatures(epicId, {
+        context: generateContext || undefined,
+        config_id: generateConfigId || undefined,
+      }),
+    onSuccess: (newFeatures) => {
+      queryClient.invalidateQueries({ queryKey: ["features", epicId] });
+      setGenerateOpen(false);
+      setGenerateContext("");
+      setGenerateConfigId("");
+      toast(
+        `Generated ${newFeatures.length} feature${newFeatures.length !== 1 ? "s" : ""} successfully`,
+        "success"
+      );
+    },
+    onError: () => toast("Failed to generate features", "error"),
+  });
+
+  const refineMutation = useMutation({
+    mutationFn: () =>
+      refineFeature(epicId, refineTarget!.id, {
+        context: refineContext || undefined,
+        config_id: refineConfigId || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["features", epicId] });
+      setRefineTarget(null);
+      setRefineContext("");
+      setRefineConfigId("");
+      toast("Feature refined successfully", "success");
+    },
+    onError: () => toast("Failed to refine feature", "error"),
+  });
+
   const openAdd = () => {
     setEditingFeature(null);
-    setFeatureData({ name: "", description: "", order: 0, status: "draft", priority: 0, created_by: "" });
+    setFeatureData({ name: "", description: "", order: 0, status: "draft", priority: 0, created_by: "", business_rules: "", acceptance_criteria: "" });
     setFormOpen(true);
   };
 
@@ -141,6 +203,8 @@ export default function EpicDetailPage() {
       status: feat.status,
       priority: feat.priority,
       created_by: feat.created_by,
+      business_rules: feat.business_rules ?? "",
+      acceptance_criteria: feat.acceptance_criteria ?? "",
     });
     setFormOpen(true);
   };
@@ -156,6 +220,8 @@ export default function EpicDetailPage() {
           order: featureData.order,
           status: featureData.status,
           priority: featureData.priority,
+          business_rules: featureData.business_rules || undefined,
+          acceptance_criteria: featureData.acceptance_criteria || undefined,
         },
       });
     } else {
@@ -203,7 +269,24 @@ export default function EpicDetailPage() {
       </Box>
 
       {/* Actions */}
-      <Box display="flex" justifyContent="flex-end" mb={2}>
+      <Box display="flex" gap={1} justifyContent="flex-end" mb={2}>
+        <Tooltip title="AI: Generate features from epic context">
+          <Button
+            variant="outlined"
+            startIcon={
+              generateMutation.isPending ? (
+                <CircularProgress size={16} />
+              ) : (
+                <IconRobot size={16} />
+              )
+            }
+            onClick={() => setGenerateOpen(true)}
+            disabled={generateMutation.isPending}
+            color="secondary"
+          >
+            AI Generate Features
+          </Button>
+        </Tooltip>
         <Button variant="contained" startIcon={<IconPlus size={16} />} onClick={openAdd}>
           Add Feature
         </Button>
@@ -221,19 +304,28 @@ export default function EpicDetailPage() {
         <Grid container spacing={2}>
           {featuresData?.items.map((feat) => (
             <Grid key={feat.id} size={{ xs: 12, sm: 6, md: 4 }}>
-              <Card variant="outlined" sx={{ height: "100%" }}>
-                <CardContent>
+              <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+                <CardContent sx={{ flexGrow: 1 }}>
                   <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
                     <Typography variant="subtitle1" fontWeight={600}>
                       {feat.name}
                     </Typography>
-                    <Box display="flex" gap={0.5}>
+                    <Box display="flex" gap={0.5} flexWrap="wrap" justifyContent="flex-end">
                       <Chip label={`P${feat.priority}`} size="small" variant="outlined" />
                       <Chip
                         label={feat.status.replace("_", " ")}
                         color={featureStatusColor(feat.status)}
                         size="small"
                       />
+                      {feat.is_ai_generated && (
+                        <Chip
+                          label="AI"
+                          icon={<IconRobot size={12} />}
+                          size="small"
+                          color="secondary"
+                          variant="outlined"
+                        />
+                      )}
                     </Box>
                   </Box>
                   {feat.description && (
@@ -241,21 +333,51 @@ export default function EpicDetailPage() {
                       {feat.description}
                     </Typography>
                   )}
+                  {feat.acceptance_criteria && (
+                    <Typography
+                      variant="caption"
+                      color="textSecondary"
+                      sx={{
+                        display: "block",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        maxWidth: "100%",
+                        mb: 0.5,
+                      }}
+                    >
+                      AC: {feat.acceptance_criteria}
+                    </Typography>
+                  )}
                   <Typography variant="caption" color="textSecondary">
                     Order: {feat.order}
                   </Typography>
                 </CardContent>
                 <Box display="flex" justifyContent="flex-end" gap={0.5} px={1} pb={1}>
-                  <IconButton
-                    size="small"
-                    color="info"
-                    title="View stories"
-                    onClick={() =>
-                      router.push(`/projects/${projectId}/epics/${epicId}/features/${feat.id}`)
-                    }
-                  >
-                    <IconExternalLink size={16} />
-                  </IconButton>
+                  <Tooltip title="View stories">
+                    <IconButton
+                      size="small"
+                      color="info"
+                      onClick={() =>
+                        router.push(`/projects/${projectId}/epics/${epicId}/features/${feat.id}`)
+                      }
+                    >
+                      <IconExternalLink size={16} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="AI Refine feature">
+                    <IconButton
+                      size="small"
+                      color="secondary"
+                      onClick={() => {
+                        setRefineTarget(feat);
+                        setRefineContext("");
+                        setRefineConfigId("");
+                      }}
+                    >
+                      <IconSparkles size={16} />
+                    </IconButton>
+                  </Tooltip>
                   <IconButton size="small" color="primary" onClick={() => openEdit(feat)}>
                     <IconPencil size={16} />
                   </IconButton>
@@ -280,6 +402,105 @@ export default function EpicDetailPage() {
           rowsPerPageOptions={[20]}
         />
       )}
+
+      {/* AI Generate Dialog */}
+      <Dialog open={generateOpen} onClose={() => setGenerateOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <IconRobot size={20} /> AI Generate Features
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="textSecondary" mb={2}>
+            AI will generate features based on the epic&apos;s name, description, and project context.
+          </Typography>
+          <Box mb={2}>
+            <AIModelSelector projectId={projectId} value={generateConfigId} onChange={setGenerateConfigId} />
+          </Box>
+          <TextField
+            label="Additional Context (optional)"
+            fullWidth
+            multiline
+            rows={4}
+            value={generateContext}
+            onChange={(e) => setGenerateContext(e.target.value)}
+            placeholder="e.g. Focus on mobile-first flows, include admin management features..."
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setGenerateOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={generateMutation.isPending ? <CircularProgress size={16} /> : <IconRobot size={16} />}
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+          >
+            {generateMutation.isPending ? "Generating..." : "Generate Features"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* AI Refine Dialog */}
+      <Dialog open={!!refineTarget} onClose={() => setRefineTarget(null)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <IconSparkles size={20} /> AI Refine Feature
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Paper variant="outlined" sx={{ p: 2, mb: 2.5, bgcolor: "action.hover" }}>
+            <Typography variant="subtitle2" fontWeight={600} mb={1.5}>{refineTarget?.name}</Typography>
+            {refineTarget?.description && (
+              <Box mb={1.5}>
+                <Typography variant="caption" color="textSecondary" fontWeight={600} display="block" mb={0.5}>Description</Typography>
+                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{refineTarget.description}</Typography>
+              </Box>
+            )}
+            {refineTarget?.business_rules && (
+              <Box mb={1.5}>
+                <Typography variant="caption" color="textSecondary" fontWeight={600} display="block" mb={0.5}>Business Rules</Typography>
+                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{refineTarget.business_rules}</Typography>
+              </Box>
+            )}
+            {refineTarget?.acceptance_criteria && (
+              <Box>
+                <Typography variant="caption" color="textSecondary" fontWeight={600} display="block" mb={0.5}>Acceptance Criteria</Typography>
+                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{refineTarget.acceptance_criteria}</Typography>
+              </Box>
+            )}
+            {!refineTarget?.description && !refineTarget?.business_rules && !refineTarget?.acceptance_criteria && (
+              <Typography variant="body2" color="textSecondary" fontStyle="italic">
+                No details yet — AI will generate them from scratch.
+              </Typography>
+            )}
+          </Paper>
+          <Box mb={2}>
+            <AIModelSelector projectId={projectId} value={refineConfigId} onChange={setRefineConfigId} />
+          </Box>
+          <TextField
+            label="Additional Context (optional)"
+            fullWidth
+            multiline
+            rows={3}
+            value={refineContext}
+            onChange={(e) => setRefineContext(e.target.value)}
+            placeholder="e.g. This feature must comply with GDPR, focus on enterprise use cases..."
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setRefineTarget(null)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={refineMutation.isPending ? <CircularProgress size={16} /> : <IconSparkles size={16} />}
+            onClick={() => refineMutation.mutate()}
+            disabled={refineMutation.isPending || !refineTarget}
+          >
+            {refineMutation.isPending ? "Refining..." : "Refine Feature"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Feature Form */}
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
@@ -362,6 +583,35 @@ export default function EpicDetailPage() {
                   </Select>
                 </FormControl>
               </Grid>
+            )}
+            {editingFeature && (
+              <>
+                <Grid size={12}>
+                  <Divider>
+                    <Typography variant="caption" color="textSecondary">AI-Enriched Fields</Typography>
+                  </Divider>
+                </Grid>
+                <Grid size={12}>
+                  <TextField
+                    label="Business Rules"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    value={featureData.business_rules}
+                    onChange={(e) => setFeatureData((p) => ({ ...p, business_rules: e.target.value }))}
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <TextField
+                    label="Acceptance Criteria"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    value={featureData.acceptance_criteria}
+                    onChange={(e) => setFeatureData((p) => ({ ...p, acceptance_criteria: e.target.value }))}
+                  />
+                </Grid>
+              </>
             )}
           </Grid>
         </DialogContent>

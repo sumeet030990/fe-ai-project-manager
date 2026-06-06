@@ -317,6 +317,9 @@ export interface FeatureResponse {
   order: number;
   status: FeatureStatus;
   priority: number;
+  is_ai_generated: boolean;
+  business_rules?: string;
+  acceptance_criteria?: string;
   created_at: string;
   updated_at: string;
 }
@@ -336,6 +339,18 @@ export interface FeatureUpdate {
   order?: number;
   status?: FeatureStatus;
   priority?: number;
+  business_rules?: string;
+  acceptance_criteria?: string;
+}
+
+export interface FeatureGenerateRequest {
+  context?: string;
+  config_id?: string;
+}
+
+export interface FeatureRefineRequest {
+  context?: string;
+  config_id?: string;
 }
 
 // Story
