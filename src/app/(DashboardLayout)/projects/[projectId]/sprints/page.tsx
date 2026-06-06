@@ -66,7 +66,7 @@ import {
 import { updateStory } from "@/services/stories";
 import {
   ActiveSprintResponse,
-  BacklogModuleGroup,
+  BacklogFeatureGroup,
   SprintAIPlanResult,
   SprintResponse,
   SprintStatus,
@@ -218,7 +218,7 @@ export default function SprintPlanningPage() {
   const [aiCapacity, setAiCapacity] = useState("30");
   const [aiContext, setAiContext] = useState("");
   const [aiConfigId, setAiConfigId] = useState("");
-  const [aiModuleIds, setAiModuleIds] = useState<string[]>([]);
+  const [aiFeatureIds, setAiFeatureIds] = useState<string[]>([]);
   const [aiResult, setAiResult] = useState<SprintAIPlanResult | null>(null);
   const [aiSelectedIds, setAiSelectedIds] = useState<string[]>([]);
   const [aiAddSectionOpen, setAiAddSectionOpen] = useState(false);
@@ -354,7 +354,7 @@ export default function SprintPlanningPage() {
 
   const statusMutation = useMutation({
     mutationFn: ({ story, status }: { story: StoryResponse; status: StoryStatus }) =>
-      updateStory(story.module_id, story.id, { status }),
+      updateStory(story.feature_id, story.id, { status }),
     onSuccess: () => {
       invalidateAll();
       setStatusMenuAnchor(null);
@@ -388,12 +388,12 @@ export default function SprintPlanningPage() {
         capacity: parseInt(aiCapacity) || 30,
         context: aiContext || undefined,
         config_id: aiConfigId || undefined,
-        module_ids: aiModuleIds.length > 0 ? aiModuleIds : undefined,
+        feature_ids: aiFeatureIds.length > 0 ? aiFeatureIds : undefined,
       }),
     onSuccess: (result) => {
       setAiPlanSprintId(aiPlanTargetSprint!.id);
       setAiPlanTargetSprint(null);
-      setAiModuleIds([]);
+      setAiFeatureIds([]);
       setAiResult(result);
       setAiSelectedIds(result.selected_stories.map((s) => s.id));
       setAiAddSectionOpen(false);
@@ -426,35 +426,35 @@ export default function SprintPlanningPage() {
   const allStoryById = useMemo(() => {
     const map: Record<string, StoryResponse> = {};
     aiResult?.selected_stories.forEach((s) => { map[s.id] = s; });
-    backlog?.modules.forEach((m) => m.stories.forEach((s) => { map[s.id] = s; }));
+    backlog?.features.forEach((f) => f.stories.forEach((s) => { map[s.id] = s; }));
     return map;
   }, [aiResult, backlog]);
 
-  const moduleNameById = useMemo(() => {
+  const featureNameById = useMemo(() => {
     const map: Record<string, string> = {};
-    backlog?.modules.forEach((m) => { map[m.module_id] = m.module_name; });
+    backlog?.features.forEach((f) => { map[f.feature_id] = f.feature_name; });
     return map;
   }, [backlog]);
 
-  // Group currently selected stories by module for the result dialog
-  const selectedStoriesByModule = useMemo(() => {
-    const groups: Record<string, { module_name: string; stories: StoryResponse[] }> = {};
+  // Group currently selected stories by feature for the result dialog
+  const selectedStoriesByFeature = useMemo(() => {
+    const groups: Record<string, { feature_name: string; stories: StoryResponse[] }> = {};
     aiSelectedIds.forEach((id) => {
       const s = allStoryById[id];
       if (!s) return;
-      const mName = moduleNameById[s.module_id] ?? "Unknown Module";
-      if (!groups[s.module_id]) groups[s.module_id] = { module_name: mName, stories: [] };
-      groups[s.module_id].stories.push(s);
+      const fName = featureNameById[s.feature_id] ?? "Unknown Feature";
+      if (!groups[s.feature_id]) groups[s.feature_id] = { feature_name: fName, stories: [] };
+      groups[s.feature_id].stories.push(s);
     });
     return Object.values(groups);
-  }, [aiSelectedIds, allStoryById, moduleNameById]);
+  }, [aiSelectedIds, allStoryById, featureNameById]);
 
-  // Backlog stories not yet in the selection, grouped by module
-  const unselectedBacklogByModule = useMemo(() => {
+  // Backlog stories not yet in the selection, grouped by feature
+  const unselectedBacklogByFeature = useMemo(() => {
     const selected = new Set(aiSelectedIds);
-    return (backlog?.modules ?? [])
-      .map((m) => ({ ...m, stories: m.stories.filter((s) => !selected.has(s.id)) }))
-      .filter((m) => m.stories.length > 0);
+    return (backlog?.features ?? [])
+      .map((f) => ({ ...f, stories: f.stories.filter((s) => !selected.has(s.id)) }))
+      .filter((f) => f.stories.length > 0);
   }, [aiSelectedIds, backlog]);
 
   // Dynamic total points for current selection
@@ -830,22 +830,22 @@ export default function SprintPlanningPage() {
               <Box display="flex" justifyContent="center" py={4}>
                 <CircularProgress />
               </Box>
-            ) : !backlog || backlog.modules.length === 0 ? (
+            ) : !backlog || backlog.features.length === 0 ? (
               <Box px={3} py={4} textAlign="center">
                 <Typography color="textSecondary">
                   All stories are assigned to sprints, or there are no stories yet.
                 </Typography>
               </Box>
             ) : (
-              backlog.modules.map((group) => (
+              backlog.features.map((group) => (
                 <BacklogGroup
-                  key={group.module_id}
+                  key={group.feature_id}
                   group={group}
-                  expanded={expandedGroups[group.module_id] ?? true}
+                  expanded={expandedGroups[group.feature_id] ?? true}
                   onToggle={() =>
                     setExpandedGroups((p) => ({
                       ...p,
-                      [group.module_id]: !(p[group.module_id] ?? true),
+                      [group.feature_id]: !(p[group.feature_id] ?? true),
                     }))
                   }
                   onAddToSprint={(story) => setAddToSprintStory(story)}
@@ -1091,7 +1091,7 @@ export default function SprintPlanningPage() {
       {/* ── AI Plan Dialog ── */}
       <Dialog
         open={!!aiPlanTargetSprint}
-        onClose={() => { setAiPlanTargetSprint(null); setAiModuleIds([]); }}
+        onClose={() => { setAiPlanTargetSprint(null); setAiFeatureIds([]); }}
         maxWidth="sm"
         fullWidth
       >
@@ -1125,19 +1125,19 @@ export default function SprintPlanningPage() {
             onChange={(e) => setAiCapacity(e.target.value)}
             sx={{ mb: 2 }}
           />
-          {backlog && backlog.modules.length > 0 && (
+          {backlog && backlog.features.length > 0 && (
             <Autocomplete
               multiple
-              options={backlog.modules}
-              getOptionLabel={(opt) => opt.module_name}
-              value={backlog.modules.filter((m) => aiModuleIds.includes(m.module_id))}
-              onChange={(_, selected) => setAiModuleIds(selected.map((m) => m.module_id))}
+              options={backlog.features}
+              getOptionLabel={(opt) => opt.feature_name}
+              value={backlog.features.filter((f) => aiFeatureIds.includes(f.feature_id))}
+              onChange={(_, selected) => setAiFeatureIds(selected.map((f) => f.feature_id))}
               disableCloseOnSelect
               renderOption={(props, option, { selected }) => (
                 <li {...props}>
                   <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
                   <Box>
-                    <Typography variant="body2">{option.module_name}</Typography>
+                    <Typography variant="body2">{option.feature_name}</Typography>
                     {option.jira_epic_key && (
                       <Typography variant="caption" color="textSecondary">{option.jira_epic_key}</Typography>
                     )}
@@ -1148,9 +1148,9 @@ export default function SprintPlanningPage() {
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Focus Modules (optional)"
-                  placeholder={aiModuleIds.length === 0 ? "All modules — pick one or more to focus AI" : ""}
-                  helperText="AI will prioritize stories from selected modules"
+                  label="Focus Features (optional)"
+                  placeholder={aiFeatureIds.length === 0 ? "All features — pick one or more to focus AI" : ""}
+                  helperText="AI will prioritize stories from selected features"
                 />
               )}
               sx={{ mb: 2 }}
@@ -1167,7 +1167,7 @@ export default function SprintPlanningPage() {
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => { setAiPlanTargetSprint(null); setAiModuleIds([]); }}>Cancel</Button>
+          <Button onClick={() => { setAiPlanTargetSprint(null); setAiFeatureIds([]); }}>Cancel</Button>
           <Button
             variant="contained"
             color="secondary"
@@ -1224,24 +1224,24 @@ export default function SprintPlanningPage() {
               <Typography variant="subtitle2" fontWeight={700} mb={1}>
                 Selected Stories
               </Typography>
-              {selectedStoriesByModule.length === 0 ? (
+              {selectedStoriesByFeature.length === 0 ? (
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 2, fontStyle: "italic" }}>
                   No stories selected. Add stories from the backlog below.
                 </Typography>
               ) : (
-                selectedStoriesByModule.map((group) => (
-                  <Box key={group.module_name} mb={1.5}>
-                    {/* Module header */}
+                selectedStoriesByFeature.map((group) => (
+                  <Box key={group.feature_name} mb={1.5}>
+                    {/* Feature header */}
                     <Box display="flex" alignItems="center" gap={0.75} mb={0.75}>
                       <IconPackage size={13} color="#5D87FF" />
                       <Chip
-                        label={group.module_name}
+                        label={group.feature_name}
                         size="small"
                         color="secondary"
                         sx={{ fontSize: "0.65rem", height: 20, fontWeight: 700 }}
                       />
                       <Chip
-                        label={`${group.stories.length} stories · ${group.stories.reduce((s, st) => s + (st.story_points ?? 0), 0)} pts`}
+                        label={`${group.stories.length} stories · ${group.stories.reduce((acc, st) => acc + (st.story_points ?? 0), 0)} pts`}
                         size="small"
                         variant="outlined"
                         sx={{ fontSize: "0.6rem", height: 18 }}
@@ -1320,9 +1320,9 @@ export default function SprintPlanningPage() {
                   <Typography variant="subtitle2" fontWeight={700} flexGrow={1}>
                     Add More Stories
                   </Typography>
-                  {unselectedBacklogByModule.length > 0 && (
+                  {unselectedBacklogByFeature.length > 0 && (
                     <Chip
-                      label={`${unselectedBacklogByModule.reduce((n, m) => n + m.stories.length, 0)} available`}
+                      label={`${unselectedBacklogByFeature.reduce((n, f) => n + f.stories.length, 0)} available`}
                       size="small"
                       variant="outlined"
                       sx={{ fontSize: "0.6rem", height: 18 }}
@@ -1331,7 +1331,7 @@ export default function SprintPlanningPage() {
                 </Box>
                 <Collapse in={aiAddSectionOpen}>
                   <Divider />
-                  {unselectedBacklogByModule.length === 0 ? (
+                  {unselectedBacklogByFeature.length === 0 ? (
                     <Box px={2} py={1.5}>
                       <Typography variant="body2" color="textSecondary">
                         All backlog stories are already selected.
@@ -1339,13 +1339,13 @@ export default function SprintPlanningPage() {
                     </Box>
                   ) : (
                     <Box px={1.5} py={1}>
-                      {unselectedBacklogByModule.map((group) => (
-                        <Box key={group.module_id} mb={1.5}>
-                          {/* Module header */}
+                      {unselectedBacklogByFeature.map((group) => (
+                        <Box key={group.feature_id} mb={1.5}>
+                          {/* Feature header */}
                           <Box display="flex" alignItems="center" gap={0.75} mb={0.5}>
                             <IconPackage size={13} color="#5D87FF" />
                             <Chip
-                              label={group.module_name}
+                              label={group.feature_name}
                               size="small"
                               color="secondary"
                               variant="outlined"
@@ -1506,18 +1506,18 @@ export default function SprintPlanningPage() {
 // ── Backlog Group component ───────────────────────────────────────────────────
 
 interface BacklogGroupProps {
-  group: BacklogModuleGroup;
+  group: BacklogFeatureGroup;
   expanded: boolean;
   onToggle: () => void;
   onAddToSprint: (story: StoryResponse) => void;
 }
 
 function BacklogGroup({ group, expanded, onToggle, onAddToSprint }: BacklogGroupProps) {
-  const modulePoints = group.stories.reduce((sum, s) => sum + (s.story_points ?? 0), 0);
+  const featurePoints = group.stories.reduce((sum, s) => sum + (s.story_points ?? 0), 0);
 
   return (
     <Box sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
-      {/* Module header */}
+      {/* Feature header */}
       <Box
         display="flex"
         alignItems="center"
@@ -1534,7 +1534,7 @@ function BacklogGroup({ group, expanded, onToggle, onAddToSprint }: BacklogGroup
         <Box ml={1} display="flex" alignItems="center" gap={1} flexGrow={1}>
           <IconPackage size={15} color="#5D87FF" />
           <Typography variant="subtitle2" fontWeight={600}>
-            {group.module_name}
+            {group.feature_name}
           </Typography>
           {group.jira_epic_key && (
             <Chip
@@ -1549,7 +1549,7 @@ function BacklogGroup({ group, expanded, onToggle, onAddToSprint }: BacklogGroup
         </Box>
         <Box display="flex" gap={0.75} alignItems="center">
           <Chip label={`${group.stories.length} stories`} size="small" variant="outlined" sx={{ fontSize: "0.65rem" }} />
-          <Chip label={`${modulePoints} pts`} size="small" color="primary" variant="outlined" sx={{ fontSize: "0.65rem" }} />
+          <Chip label={`${featurePoints} pts`} size="small" color="primary" variant="outlined" sx={{ fontSize: "0.65rem" }} />
         </Box>
       </Box>
 

@@ -270,36 +270,36 @@ export interface ProjectPluginUpdate {
   description?: string;
 }
 
-// Module
-export type ModuleStatus = "draft" | "ready" | "in_progress" | "done";
+// Feature
+export type FeatureStatus = "draft" | "ready" | "in_progress" | "done";
 
-export interface ModuleResponse {
+export interface FeatureResponse {
   id: string;
   project_id: string;
   created_by: string;
   name: string;
   description?: string;
   order: number;
-  status: ModuleStatus;
+  status: FeatureStatus;
   priority: number;
   created_at: string;
   updated_at: string;
 }
 
-export interface ModuleCreate {
+export interface FeatureCreate {
   name: string;
   description?: string;
   order?: number;
-  status?: ModuleStatus;
+  status?: FeatureStatus;
   priority?: number;
   created_by: string;
 }
 
-export interface ModuleUpdate {
+export interface FeatureUpdate {
   name?: string;
   description?: string;
   order?: number;
-  status?: ModuleStatus;
+  status?: FeatureStatus;
   priority?: number;
 }
 
@@ -315,7 +315,7 @@ export interface StoryAssignee {
 
 export interface StoryResponse {
   id: string;
-  module_id: string;
+  feature_id: string;
   title: string;
   description?: string;
   order: number;
@@ -458,15 +458,15 @@ export interface SprintStoriesRequest {
   story_ids: string[];
 }
 
-export interface BacklogModuleGroup {
-  module_id: string;
-  module_name: string;
+export interface BacklogFeatureGroup {
+  feature_id: string;
+  feature_name: string;
   jira_epic_key?: string | null;
   stories: StoryResponse[];
 }
 
 export interface BacklogResponse {
-  modules: BacklogModuleGroup[];
+  features: BacklogFeatureGroup[];
   total_stories: number;
   total_points: number;
 }
@@ -502,7 +502,7 @@ export interface SprintAIPlanRequest {
   capacity: number;
   context?: string;
   config_id?: string;
-  module_ids?: string[];
+  feature_ids?: string[];
 }
 
 export interface SprintAIPlanResult {

@@ -27,45 +27,45 @@ import {
 import { IconExternalLink, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { createModule, deleteModule, getModules, updateModule } from "@/services/modules";
+import { createFeature, deleteFeature, getFeatures, updateFeature } from "@/services/features";
 import { getUsers } from "@/services/users";
-import { ModuleCreate, ModuleResponse, ModuleStatus, ModuleUpdate } from "@/types";
+import { FeatureCreate, FeatureResponse, FeatureStatus, FeatureUpdate } from "@/types";
 
 type Snack = { open: boolean; message: string; severity: "success" | "error" };
 
-const MODULE_STATUSES: ModuleStatus[] = ["draft", "ready", "in_progress", "done"];
+const FEATURE_STATUSES: FeatureStatus[] = ["draft", "ready", "in_progress", "done"];
 
-const moduleStatusColor = (s: string): "default" | "info" | "warning" | "success" => {
+const featureStatusColor = (s: string): "default" | "info" | "warning" | "success" => {
   if (s === "ready") return "info";
   if (s === "in_progress") return "warning";
   if (s === "done") return "success";
   return "default";
 };
 
-export default function ModulesTab({ projectId }: { projectId: string }) {
+export default function FeaturesTab({ projectId }: { projectId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const rowsPerPage = 20;
   const [formOpen, setFormOpen] = useState(false);
-  const [editingModule, setEditingModule] = useState<ModuleResponse | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ModuleResponse | null>(null);
+  const [editingFeature, setEditingFeature] = useState<FeatureResponse | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FeatureResponse | null>(null);
   const [snack, setSnack] = useState<Snack>({ open: false, message: "", severity: "success" });
   const toast = (message: string, severity: "success" | "error") =>
     setSnack({ open: true, message, severity });
 
-  const [moduleData, setModuleData] = useState({
+  const [featureData, setFeatureData] = useState({
     name: "",
     description: "",
     order: 0,
-    status: "draft" as ModuleStatus,
+    status: "draft" as FeatureStatus,
     priority: 0,
     created_by: "",
   });
 
-  const { data: modulesData, isLoading } = useQuery({
-    queryKey: ["modules", projectId, page],
-    queryFn: () => getModules(projectId, page + 1, rowsPerPage),
+  const { data: featuresData, isLoading } = useQuery({
+    queryKey: ["features", projectId, page],
+    queryFn: () => getFeatures(projectId, page + 1, rowsPerPage),
   });
 
   const { data: usersData } = useQuery({
@@ -75,79 +75,79 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: ModuleCreate) => createModule(projectId, payload),
+    mutationFn: (payload: FeatureCreate) => createFeature(projectId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["modules", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["features", projectId] });
       setFormOpen(false);
-      toast("Module created", "success");
+      toast("Feature created", "success");
     },
-    onError: () => toast("Failed to create module", "error"),
+    onError: () => toast("Failed to create feature", "error"),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: ModuleUpdate }) =>
-      updateModule(projectId, id, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: FeatureUpdate }) =>
+      updateFeature(projectId, id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["modules", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["features", projectId] });
       setFormOpen(false);
-      setEditingModule(null);
-      toast("Module updated", "success");
+      setEditingFeature(null);
+      toast("Feature updated", "success");
     },
-    onError: () => toast("Failed to update module", "error"),
+    onError: () => toast("Failed to update feature", "error"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: ({ id, deleteRemote }: { id: string; deleteRemote: boolean }) =>
-      deleteModule(projectId, id, deleteRemote),
+      deleteFeature(projectId, id, deleteRemote),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["modules", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["features", projectId] });
       setDeleteTarget(null);
-      toast("Module deleted", "success");
+      toast("Feature deleted", "success");
     },
-    onError: () => toast("Failed to delete module", "error"),
+    onError: () => toast("Failed to delete feature", "error"),
   });
 
   const openAdd = () => {
-    setEditingModule(null);
-    setModuleData({ name: "", description: "", order: 0, status: "draft", priority: 0, created_by: "" });
+    setEditingFeature(null);
+    setFeatureData({ name: "", description: "", order: 0, status: "draft", priority: 0, created_by: "" });
     setFormOpen(true);
   };
 
-  const openEdit = (mod: ModuleResponse) => {
-    setEditingModule(mod);
-    setModuleData({
-      name: mod.name,
-      description: mod.description ?? "",
-      order: mod.order,
-      status: mod.status,
-      priority: mod.priority,
-      created_by: mod.created_by,
+  const openEdit = (feat: FeatureResponse) => {
+    setEditingFeature(feat);
+    setFeatureData({
+      name: feat.name,
+      description: feat.description ?? "",
+      order: feat.order,
+      status: feat.status,
+      priority: feat.priority,
+      created_by: feat.created_by,
     });
     setFormOpen(true);
   };
 
   const handleSubmit = () => {
-    if (!moduleData.name.trim()) return;
-    if (editingModule) {
+    if (!featureData.name.trim()) return;
+    if (editingFeature) {
       updateMutation.mutate({
-        id: editingModule.id,
+        id: editingFeature.id,
         payload: {
-          name: moduleData.name,
-          description: moduleData.description || undefined,
-          order: moduleData.order,
-          status: moduleData.status,
-          priority: moduleData.priority,
+          name: featureData.name,
+          description: featureData.description || undefined,
+          order: featureData.order,
+          status: featureData.status,
+          priority: featureData.priority,
         },
       });
     } else {
-      if (!moduleData.created_by) return;
+      if (!featureData.created_by) return;
       createMutation.mutate({
-        name: moduleData.name,
-        description: moduleData.description || undefined,
-        order: moduleData.order,
-        status: moduleData.status,
-        priority: moduleData.priority,
-        created_by: moduleData.created_by,
+        name: featureData.name,
+        description: featureData.description || undefined,
+        order: featureData.order,
+        status: featureData.status,
+        priority: featureData.priority,
+        created_by: featureData.created_by,
       });
     }
   };
@@ -163,44 +163,44 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
     <>
       <Box display="flex" justifyContent="flex-end" mb={2}>
         <Button variant="contained" startIcon={<IconPlus size={16} />} onClick={openAdd}>
-          Add Module
+          Add Feature
         </Button>
       </Box>
 
-      {modulesData?.items.length === 0 ? (
+      {featuresData?.items.length === 0 ? (
         <Typography color="textSecondary" textAlign="center" py={4}>
-          No modules yet. Add one to get started.
+          No features yet. Add one to get started.
         </Typography>
       ) : (
         <Grid container spacing={2}>
-          {modulesData?.items.map((mod) => (
-            <Grid key={mod.id} size={{ xs: 12, sm: 6, md: 4 }}>
+          {featuresData?.items.map((feat) => (
+            <Grid key={feat.id} size={{ xs: 12, sm: 6, md: 4 }}>
               <Card variant="outlined" sx={{ height: "100%" }}>
                 <CardContent>
                   <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
                     <Typography variant="subtitle1" fontWeight={600}>
-                      {mod.name}
+                      {feat.name}
                     </Typography>
                     <Box display="flex" gap={0.5}>
                       <Chip
-                        label={`P${mod.priority}`}
+                        label={`P${feat.priority}`}
                         size="small"
                         variant="outlined"
                       />
                       <Chip
-                        label={mod.status.replace("_", " ")}
-                        color={moduleStatusColor(mod.status)}
+                        label={feat.status.replace("_", " ")}
+                        color={featureStatusColor(feat.status)}
                         size="small"
                       />
                     </Box>
                   </Box>
-                  {mod.description && (
+                  {feat.description && (
                     <Typography variant="body2" color="textSecondary" mb={1}>
-                      {mod.description}
+                      {feat.description}
                     </Typography>
                   )}
                   <Typography variant="caption" color="textSecondary">
-                    Order: {mod.order}
+                    Order: {feat.order}
                   </Typography>
                 </CardContent>
                 <Box display="flex" justifyContent="flex-end" gap={0.5} px={1} pb={1}>
@@ -208,14 +208,14 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
                     size="small"
                     color="info"
                     title="View stories"
-                    onClick={() => router.push(`/projects/${projectId}/modules/${mod.id}`)}
+                    onClick={() => router.push(`/projects/${projectId}/features/${feat.id}`)}
                   >
                     <IconExternalLink size={16} />
                   </IconButton>
-                  <IconButton size="small" color="primary" onClick={() => openEdit(mod)}>
+                  <IconButton size="small" color="primary" onClick={() => openEdit(feat)}>
                     <IconPencil size={16} />
                   </IconButton>
-                  <IconButton size="small" color="error" onClick={() => setDeleteTarget(mod)}>
+                  <IconButton size="small" color="error" onClick={() => setDeleteTarget(feat)}>
                     <IconTrash size={16} />
                   </IconButton>
                 </Box>
@@ -225,10 +225,10 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
         </Grid>
       )}
 
-      {(modulesData?.total ?? 0) > rowsPerPage && (
+      {(featuresData?.total ?? 0) > rowsPerPage && (
         <TablePagination
           component="div"
-          count={modulesData?.total ?? 0}
+          count={featuresData?.total ?? 0}
           page={page}
           onPageChange={(_, p) => setPage(p)}
           rowsPerPage={rowsPerPage}
@@ -237,18 +237,18 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
         />
       )}
 
-      {/* Module Form */}
+      {/* Feature Form */}
       <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingModule ? "Edit Module" : "Add Module"}</DialogTitle>
+        <DialogTitle>{editingFeature ? "Edit Feature" : "Add Feature"}</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid size={12}>
               <TextField
-                label="Module Name"
+                label="Feature Name"
                 fullWidth
                 required
-                value={moduleData.name}
-                onChange={(e) => setModuleData((p) => ({ ...p, name: e.target.value }))}
+                value={featureData.name}
+                onChange={(e) => setFeatureData((p) => ({ ...p, name: e.target.value }))}
               />
             </Grid>
             <Grid size={12}>
@@ -257,21 +257,21 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
                 fullWidth
                 multiline
                 rows={2}
-                value={moduleData.description}
-                onChange={(e) => setModuleData((p) => ({ ...p, description: e.target.value }))}
+                value={featureData.description}
+                onChange={(e) => setFeatureData((p) => ({ ...p, description: e.target.value }))}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select
-                  value={moduleData.status}
+                  value={featureData.status}
                   label="Status"
                   onChange={(e) =>
-                    setModuleData((p) => ({ ...p, status: e.target.value as ModuleStatus }))
+                    setFeatureData((p) => ({ ...p, status: e.target.value as FeatureStatus }))
                   }
                 >
-                  {MODULE_STATUSES.map((s) => (
+                  {FEATURE_STATUSES.map((s) => (
                     <MenuItem key={s} value={s}>
                       {s.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                     </MenuItem>
@@ -284,9 +284,9 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
                 label="Priority"
                 type="number"
                 fullWidth
-                value={moduleData.priority}
+                value={featureData.priority}
                 onChange={(e) =>
-                  setModuleData((p) => ({ ...p, priority: parseInt(e.target.value) || 0 }))
+                  setFeatureData((p) => ({ ...p, priority: parseInt(e.target.value) || 0 }))
                 }
               />
             </Grid>
@@ -295,20 +295,20 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
                 label="Order"
                 type="number"
                 fullWidth
-                value={moduleData.order}
+                value={featureData.order}
                 onChange={(e) =>
-                  setModuleData((p) => ({ ...p, order: parseInt(e.target.value) || 0 }))
+                  setFeatureData((p) => ({ ...p, order: parseInt(e.target.value) || 0 }))
                 }
               />
             </Grid>
-            {!editingModule && (
+            {!editingFeature && (
               <Grid size={12}>
                 <FormControl fullWidth required>
                   <InputLabel>Created By</InputLabel>
                   <Select
-                    value={moduleData.created_by}
+                    value={featureData.created_by}
                     label="Created By"
-                    onChange={(e) => setModuleData((p) => ({ ...p, created_by: e.target.value }))}
+                    onChange={(e) => setFeatureData((p) => ({ ...p, created_by: e.target.value }))}
                   >
                     {usersData?.items.map((u) => (
                       <MenuItem key={u.id} value={u.id}>
@@ -330,23 +330,23 @@ export default function ModulesTab({ projectId }: { projectId: string }) {
           >
             {createMutation.isPending || updateMutation.isPending
               ? "Saving..."
-              : editingModule
+              : editingFeature
               ? "Update"
               : "Create"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Delete Module */}
+      {/* Delete Feature */}
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>Delete Module</DialogTitle>
+        <DialogTitle>Delete Feature</DialogTitle>
         <DialogContent>
           <Typography>
             Delete <strong>{deleteTarget?.name}</strong>? All associated stories will also be
             removed.
           </Typography>
           <Typography variant="caption" color="textSecondary" display="block" mt={1}>
-            Choose whether to also delete linked JIRA issues for all stories in this module.
+            Choose whether to also delete linked JIRA issues for all stories in this feature.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>

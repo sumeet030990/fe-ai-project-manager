@@ -297,7 +297,7 @@ export default function ProjectsPage() {
           <Typography>
             Are you sure you want to delete{" "}
             <strong>{deleteTarget?.name}</strong>? This will also delete all
-            modules and stories.
+            features and stories.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>

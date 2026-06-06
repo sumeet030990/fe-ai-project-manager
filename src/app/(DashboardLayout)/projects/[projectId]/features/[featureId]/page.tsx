@@ -48,7 +48,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
 import AIModelSelector from "@/app/(DashboardLayout)/components/shared/AIModelSelector";
-import { getModule } from "@/services/modules";
+import { getFeature } from "@/services/features";
 import { getProject } from "@/services/projects";
 import {
   createStory,
@@ -107,12 +107,12 @@ const emptyStoryForm = {
 
 type StoryForm = typeof emptyStoryForm;
 
-export default function ModuleDetailPage() {
+export default function FeatureDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
   const projectId = params.projectId as string;
-  const moduleId = params.moduleId as string;
+  const featureId = params.featureId as string;
 
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(20);
@@ -145,22 +145,22 @@ export default function ModuleDetailPage() {
     enabled: !!projectId,
   });
 
-  const { data: module, isLoading: moduleLoading } = useQuery({
-    queryKey: ["module", projectId, moduleId],
-    queryFn: () => getModule(projectId, moduleId),
-    enabled: !!projectId && !!moduleId,
+  const { data: feature, isLoading: featureLoading } = useQuery({
+    queryKey: ["feature", projectId, featureId],
+    queryFn: () => getFeature(projectId, featureId),
+    enabled: !!projectId && !!featureId,
   });
 
   const { data: storiesData, isLoading: storiesLoading } = useQuery({
-    queryKey: ["stories", moduleId, page],
-    queryFn: () => getStories(moduleId, page + 1, rowsPerPage),
-    enabled: !!moduleId,
+    queryKey: ["stories", featureId, page],
+    queryFn: () => getStories(featureId, page + 1, rowsPerPage),
+    enabled: !!featureId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: StoryCreate) => createStory(moduleId, payload),
+    mutationFn: (payload: StoryCreate) => createStory(featureId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setFormOpen(false);
       toast("Story created", "success");
     },
@@ -169,9 +169,9 @@ export default function ModuleDetailPage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: StoryUpdate }) =>
-      updateStory(moduleId, id, payload),
+      updateStory(featureId, id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setFormOpen(false);
       setEditingStory(null);
       toast("Story updated", "success");
@@ -181,9 +181,9 @@ export default function ModuleDetailPage() {
 
   const deleteMutation = useMutation({
     mutationFn: ({ id, deleteRemote }: { id: string; deleteRemote: boolean }) =>
-      deleteStory(moduleId, id, deleteRemote),
+      deleteStory(featureId, id, deleteRemote),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setDeleteTarget(null);
       toast("Story deleted", "success");
     },
@@ -192,12 +192,12 @@ export default function ModuleDetailPage() {
 
   const generateMutation = useMutation({
     mutationFn: () =>
-      generateStories(projectId, moduleId, {
+      generateStories(projectId, featureId, {
         context: generateContext || undefined,
         config_id: generateConfigId || undefined,
       }),
     onSuccess: (newStories) => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setGenerateOpen(false);
       setGenerateContext("");
       setGenerateConfigId("");
@@ -211,12 +211,12 @@ export default function ModuleDetailPage() {
 
   const refineMutation = useMutation({
     mutationFn: () =>
-      refineStory(moduleId, refineTarget!.id, {
+      refineStory(featureId, refineTarget!.id, {
         context: refineContext || undefined,
         config_id: refineConfigId || undefined,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setRefineTarget(null);
       setRefineContext("");
       setRefineConfigId("");
@@ -226,18 +226,18 @@ export default function ModuleDetailPage() {
   });
 
   const jiraSyncMutation = useMutation({
-    mutationFn: () => syncStoriesFromJira(moduleId),
+    mutationFn: () => syncStoriesFromJira(featureId),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setSyncResult(result);
     },
     onError: () => toast("Failed to sync from JIRA", "error"),
   });
 
   const jiraPullMutation = useMutation({
-    mutationFn: (storyId: string) => pullStoryFromJira(moduleId, storyId),
+    mutationFn: (storyId: string) => pullStoryFromJira(featureId, storyId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setJiraPullId(null);
       toast("Story refreshed from JIRA", "success");
     },
@@ -245,9 +245,9 @@ export default function ModuleDetailPage() {
   });
 
   const jiraCreateMutation = useMutation({
-    mutationFn: (storyId: string) => createStoryInJira(moduleId, storyId),
+    mutationFn: (storyId: string) => createStoryInJira(featureId, storyId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setJiraActionId(null);
       toast("Story pushed to JIRA", "success");
     },
@@ -255,9 +255,9 @@ export default function ModuleDetailPage() {
   });
 
   const jiraUpdateMutation = useMutation({
-    mutationFn: (storyId: string) => updateStoryInJira(moduleId, storyId),
+    mutationFn: (storyId: string) => updateStoryInJira(featureId, storyId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setJiraActionId(null);
       toast("JIRA issue updated", "success");
     },
@@ -265,9 +265,9 @@ export default function ModuleDetailPage() {
   });
 
   const jiraDeleteMutation = useMutation({
-    mutationFn: (storyId: string) => deleteStoryFromJira(moduleId, storyId),
+    mutationFn: (storyId: string) => deleteStoryFromJira(featureId, storyId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stories", moduleId] });
+      queryClient.invalidateQueries({ queryKey: ["stories", featureId] });
       setJiraDeleteTarget(null);
       toast("JIRA issue deleted and story unlinked", "success");
     },
@@ -327,12 +327,12 @@ export default function ModuleDetailPage() {
     }
   };
 
-  const isLoading = moduleLoading || storiesLoading;
+  const isLoading = featureLoading || storiesLoading;
 
   return (
     <PageContainer
-      title={module?.name ?? "Module"}
-      description={module?.description ?? ""}
+      title={feature?.name ?? "Feature"}
+      description={feature?.description ?? ""}
     >
       {/* Breadcrumb Header */}
       <Box display="flex" alignItems="center" gap={1} mb={3}>
@@ -344,26 +344,26 @@ export default function ModuleDetailPage() {
         </IconButton>
         <Box flexGrow={1}>
           <Typography variant="caption" color="textSecondary">
-            {project?.name} / Modules
+            {project?.name} / Features
           </Typography>
           <Typography variant="h4" fontWeight={600}>
-            {module?.name ?? "..."}
+            {feature?.name ?? "..."}
           </Typography>
-          {module?.description && (
+          {feature?.description && (
             <Typography variant="body2" color="textSecondary">
-              {module.description}
+              {feature.description}
             </Typography>
           )}
         </Box>
-        {module && (
+        {feature && (
           <Chip
-            label={module.status.replace("_", " ")}
+            label={feature.status.replace("_", " ")}
             color={
-              module.status === "done"
+              feature.status === "done"
                 ? "success"
-                : module.status === "in_progress"
+                : feature.status === "in_progress"
                 ? "warning"
-                : module.status === "ready"
+                : feature.status === "ready"
                 ? "info"
                 : "default"
             }
@@ -385,7 +385,7 @@ export default function ModuleDetailPage() {
             Sync from JIRA
           </Button>
         </Tooltip>
-        <Tooltip title="AI: Generate stories from project info and module context">
+        <Tooltip title="AI: Generate stories from project info and feature context">
           <Button
             variant="outlined"
             startIcon={<IconRobot size={16} />}
@@ -545,7 +545,7 @@ export default function ModuleDetailPage() {
                             color="inherit"
                             onClick={() =>
                               router.push(
-                                `/projects/${projectId}/modules/${moduleId}/stories/${story.id}/test-cases`
+                                `/projects/${projectId}/features/${featureId}/stories/${story.id}/test-cases`
                               )
                             }
                           >
@@ -855,7 +855,7 @@ export default function ModuleDetailPage() {
         <DialogContent dividers>
           <Typography variant="body2" color="textSecondary" mb={2}>
             AI will generate user stories based on the project info, tech
-            stack, and this module&apos;s context. Optionally provide extra context
+            stack, and this feature&apos;s context. Optionally provide extra context
             below.
           </Typography>
           <Box mb={2}>
@@ -909,7 +909,6 @@ export default function ModuleDetailPage() {
           </Box>
         </DialogTitle>
         <DialogContent dividers>
-          {/* Current story details */}
           <Paper variant="outlined" sx={{ p: 2, mb: 2.5, bgcolor: "action.hover" }}>
             <Typography variant="subtitle2" fontWeight={600} mb={1.5}>
               {refineTarget?.title}

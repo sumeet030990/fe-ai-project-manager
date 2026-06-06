@@ -9,69 +9,69 @@ import {
 } from "@/types";
 
 export const getStories = async (
-  moduleId: string,
+  featureId: string,
   page = 1,
   size = 20
 ): Promise<PaginatedResponse<StoryResponse>> => {
-  const { data } = await axiosInstance.get(`/modules/${moduleId}/stories`, {
+  const { data } = await axiosInstance.get(`/features/${featureId}/stories`, {
     params: { page, size },
   });
   return data;
 };
 
 export const getStory = async (
-  moduleId: string,
+  featureId: string,
   storyId: string
 ): Promise<StoryResponse> => {
-  const { data } = await axiosInstance.get(`/modules/${moduleId}/stories/${storyId}`);
+  const { data } = await axiosInstance.get(`/features/${featureId}/stories/${storyId}`);
   return data;
 };
 
 export const createStory = async (
-  moduleId: string,
+  featureId: string,
   payload: StoryCreate
 ): Promise<StoryResponse> => {
-  const { data } = await axiosInstance.post(`/modules/${moduleId}/stories`, payload);
+  const { data } = await axiosInstance.post(`/features/${featureId}/stories`, payload);
   return data;
 };
 
 export const updateStory = async (
-  moduleId: string,
+  featureId: string,
   storyId: string,
   payload: StoryUpdate
 ): Promise<StoryResponse> => {
   const { data } = await axiosInstance.patch(
-    `/modules/${moduleId}/stories/${storyId}`,
+    `/features/${featureId}/stories/${storyId}`,
     payload
   );
   return data;
 };
 
-export const deleteStory = async (moduleId: string, storyId: string, deleteRemote = false): Promise<void> => {
-  await axiosInstance.delete(`/modules/${moduleId}/stories/${storyId}`, {
+export const deleteStory = async (featureId: string, storyId: string, deleteRemote = false): Promise<void> => {
+  await axiosInstance.delete(`/features/${featureId}/stories/${storyId}`, {
     params: { delete_remote: deleteRemote },
   });
 };
 
 export const generateStories = async (
   projectId: string,
-  moduleId: string,
+  featureId: string,
   payload: StoryGenerateRequest = {}
 ): Promise<StoryResponse[]> => {
   const { data } = await axiosInstance.post(
-    `/projects/${projectId}/modules/${moduleId}/generate-stories`,
+    `/projects/${projectId}/features/${featureId}/generate-stories`,
     payload
   );
   return data;
 };
 
 export const refineStory = async (
-  moduleId: string,
+  featureId: string,
   storyId: string,
   payload: StoryRefineRequest = {}
 ): Promise<StoryResponse> => {
   const { data } = await axiosInstance.post(
-    `/modules/${moduleId}/stories/${storyId}/refine`,
+    `/features/${featureId}/stories/${storyId}/refine`,
     payload
   );
   return data;

@@ -47,7 +47,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
 import AIModelSelector from "@/app/(DashboardLayout)/components/shared/AIModelSelector";
-import { getModule } from "@/services/modules";
+import { getFeature } from "@/services/features";
 import { getProject } from "@/services/projects";
 import { getStory } from "@/services/stories";
 import { getTechStacks } from "@/services/tech_stacks";
@@ -97,7 +97,7 @@ export default function TestCasesPage() {
   const queryClient = useQueryClient();
 
   const projectId = params.projectId as string;
-  const moduleId = params.moduleId as string;
+  const featureId = params.featureId as string;
   const storyId = params.storyId as string;
 
   const [page, setPage] = useState(0);
@@ -128,22 +128,22 @@ export default function TestCasesPage() {
     enabled: !!projectId,
   });
 
-  const { data: module } = useQuery({
-    queryKey: ["module", projectId, moduleId],
-    queryFn: () => getModule(projectId, moduleId),
-    enabled: !!projectId && !!moduleId,
+  const { data: feature } = useQuery({
+    queryKey: ["feature", projectId, featureId],
+    queryFn: () => getFeature(projectId, featureId),
+    enabled: !!projectId && !!featureId,
   });
 
   const { data: story, isLoading: storyLoading } = useQuery({
-    queryKey: ["story", moduleId, storyId],
-    queryFn: () => getStory(moduleId, storyId),
-    enabled: !!moduleId && !!storyId,
+    queryKey: ["story", featureId, storyId],
+    queryFn: () => getStory(featureId, storyId),
+    enabled: !!featureId && !!storyId,
   });
 
   const { data: tcData, isLoading: tcLoading } = useQuery({
-    queryKey: ["test-cases", moduleId, storyId, page],
-    queryFn: () => getTestCases(moduleId, storyId, page + 1, rowsPerPage),
-    enabled: !!moduleId && !!storyId,
+    queryKey: ["test-cases", featureId, storyId, page],
+    queryFn: () => getTestCases(featureId, storyId, page + 1, rowsPerPage),
+    enabled: !!featureId && !!storyId,
   });
 
   const { data: techStacksData } = useQuery({
@@ -153,9 +153,9 @@ export default function TestCasesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: TestCaseCreate) => createTestCase(moduleId, storyId, payload),
+    mutationFn: (payload: TestCaseCreate) => createTestCase(featureId, storyId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["test-cases", moduleId, storyId] });
+      queryClient.invalidateQueries({ queryKey: ["test-cases", featureId, storyId] });
       setFormOpen(false);
       toast("Test case created", "success");
     },
@@ -164,9 +164,9 @@ export default function TestCasesPage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: TestCaseUpdate }) =>
-      updateTestCase(moduleId, storyId, id, payload),
+      updateTestCase(featureId, storyId, id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["test-cases", moduleId, storyId] });
+      queryClient.invalidateQueries({ queryKey: ["test-cases", featureId, storyId] });
       setFormOpen(false);
       setEditingTc(null);
       toast("Test case updated", "success");
@@ -175,9 +175,9 @@ export default function TestCasesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteTestCase(moduleId, storyId, id),
+    mutationFn: (id: string) => deleteTestCase(featureId, storyId, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["test-cases", moduleId, storyId] });
+      queryClient.invalidateQueries({ queryKey: ["test-cases", featureId, storyId] });
       setDeleteTarget(null);
       toast("Test case deleted", "success");
     },
@@ -186,9 +186,9 @@ export default function TestCasesPage() {
 
   const generateMutation = useMutation({
     mutationFn: (payload: TestCaseGenerateRequest) =>
-      generateTestCases(moduleId, storyId, payload),
+      generateTestCases(featureId, storyId, payload),
     onSuccess: (newTcs) => {
-      queryClient.invalidateQueries({ queryKey: ["test-cases", moduleId, storyId] });
+      queryClient.invalidateQueries({ queryKey: ["test-cases", featureId, storyId] });
       setGenerateOpen(false);
       setGenerateContext("");
       setGenerateConfigId("");
@@ -201,7 +201,7 @@ export default function TestCasesPage() {
   });
 
   const savePromptMutation = useMutation({
-    mutationFn: (payload: PromptCreate) => savePrompt(moduleId, storyId, payload),
+    mutationFn: (payload: PromptCreate) => savePrompt(featureId, storyId, payload),
     onSuccess: () => {
       toast("Prompt saved successfully", "success");
     },
@@ -339,14 +339,14 @@ export default function TestCasesPage() {
       {/* Breadcrumb Header */}
       <Box display="flex" alignItems="center" gap={1} mb={3}>
         <IconButton
-          onClick={() => router.push(`/projects/${projectId}/modules/${moduleId}`)}
+          onClick={() => router.push(`/projects/${projectId}/features/${featureId}`)}
           size="small"
         >
           <IconArrowLeft size={20} />
         </IconButton>
         <Box flexGrow={1}>
           <Typography variant="caption" color="textSecondary">
-            {project?.name} / {module?.name} / Stories
+            {project?.name} / {feature?.name} / Stories
           </Typography>
           <Typography variant="h4" fontWeight={600}>
             {storyLoading ? "..." : story?.title}

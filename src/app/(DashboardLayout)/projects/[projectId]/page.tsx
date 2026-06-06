@@ -17,15 +17,15 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
 import { getProject } from "@/services/projects";
 import AIConfigTab from "./tabs/AIConfigTab";
-import ModulesTab from "./tabs/ModulesTab";
+import FeaturesTab from "./tabs/FeaturesTab";
 import TeamTab from "./tabs/TeamTab";
 import TechStacksTab from "./tabs/TechStacksTab";
 
-const TABS = ["modules", "team", "techstacks", "aiconfig"] as const;
+const TABS = ["features", "team", "techstacks", "aiconfig"] as const;
 type TabSlug = (typeof TABS)[number];
 
 const TAB_LABELS: Record<TabSlug, string> = {
-  modules: "Modules",
+  features: "Features",
   team: "Team",
   techstacks: "Tech Stacks & Plugins",
   aiconfig: "AI Config",
@@ -38,7 +38,7 @@ export default function ProjectDetailPage() {
   const projectId = params.projectId as string;
 
   const rawTab = searchParams.get("tab") as TabSlug | null;
-  const activeTab: TabSlug = rawTab && TABS.includes(rawTab) ? rawTab : "modules";
+  const activeTab: TabSlug = rawTab && TABS.includes(rawTab) ? rawTab : "features";
   const tabIndex = TABS.indexOf(activeTab);
 
   const handleTabChange = useCallback(
@@ -123,7 +123,7 @@ export default function ProjectDetailPage() {
       </Paper>
 
       <Box>
-        {activeTab === "modules" && <ModulesTab projectId={projectId} />}
+        {activeTab === "features" && <FeaturesTab projectId={projectId} />}
         {activeTab === "team" && <TeamTab projectId={projectId} />}
         {activeTab === "techstacks" && <TechStacksTab projectId={projectId} />}
         {activeTab === "aiconfig" && <AIConfigTab projectId={projectId} />}
