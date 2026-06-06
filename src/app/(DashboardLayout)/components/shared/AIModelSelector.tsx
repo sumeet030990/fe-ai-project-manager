@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Box,
   FormControl,
@@ -34,6 +34,15 @@ export default function AIModelSelector({ projectId, value, onChange, label = "A
   });
 
   const configs = data?.items ?? [];
+
+  useEffect(() => {
+    if (value === "" && configs.length > 0) {
+      const defaultConfig = configs.find((c: ProjectAIConfigResponse) => c.is_default);
+      if (defaultConfig) {
+        onChange(defaultConfig.id);
+      }
+    }
+  }, [configs, value, onChange]);
 
   return (
     <FormControl fullWidth size="small">
