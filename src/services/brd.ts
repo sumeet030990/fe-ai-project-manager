@@ -1,5 +1,11 @@
 import axiosInstance from "@/lib/axios";
-import { BRDAnalysisResult, BRDBulkSaveRequest, BRDBulkSaveResponse } from "@/types";
+import {
+  BRDAnalysisResult,
+  BRDBulkSaveRequest,
+  BRDBulkSaveResponse,
+  BRDRefineRequest,
+  BRDRefineResponse,
+} from "@/types";
 
 export const analyzeBRD = async (
   projectId: string,
@@ -15,6 +21,17 @@ export const analyzeBRD = async (
     `/projects/${projectId}/brd/analyze`,
     formData,
     { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return data;
+};
+
+export const refineBRDItem = async (
+  projectId: string,
+  payload: BRDRefineRequest
+): Promise<BRDRefineResponse> => {
+  const { data } = await axiosInstance.post(
+    `/projects/${projectId}/brd/refine`,
+    payload
   );
   return data;
 };

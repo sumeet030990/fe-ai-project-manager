@@ -568,6 +568,8 @@ export type BRDSyncStatus = "new" | "exists" | "update";
 export interface BRDStoryResult {
   title: string;
   description?: string;
+  business_rules?: string;
+  acceptance_criteria?: string;
   order: number;
   story_points: number;
   priority: number;
@@ -578,6 +580,8 @@ export interface BRDStoryResult {
 export interface BRDFeatureResult {
   name: string;
   description?: string;
+  business_rules?: string;
+  acceptance_criteria?: string;
   order: number;
   priority: number;
   stories: BRDStoryResult[];
@@ -585,14 +589,43 @@ export interface BRDFeatureResult {
   existing_id?: string | null;
 }
 
+export interface BRDEpicResult {
+  name: string;
+  description?: string;
+  order: number;
+  priority: number;
+  features: BRDFeatureResult[];
+  sync_status: BRDSyncStatus;
+  existing_id?: string | null;
+}
+
 export interface BRDAnalysisResult {
   project_context: string;
-  features: BRDFeatureResult[];
+  epics: BRDEpicResult[];
+}
+
+export interface BRDRefineRequest {
+  item_type: "epic" | "feature" | "story";
+  name?: string;
+  title?: string;
+  description?: string;
+  business_rules?: string;
+  acceptance_criteria?: string;
+  context?: string;
+  config_id?: string;
+}
+
+export interface BRDRefineResponse {
+  description?: string;
+  business_rules?: string;
+  acceptance_criteria?: string;
 }
 
 export interface BRDStorySave {
   title: string;
   description?: string;
+  business_rules?: string;
+  acceptance_criteria?: string;
   order: number;
   story_points: number;
   priority: number;
@@ -602,20 +635,33 @@ export interface BRDStorySave {
 export interface BRDFeatureSave {
   name: string;
   description?: string;
+  business_rules?: string;
+  acceptance_criteria?: string;
   order: number;
   priority: number;
   stories: BRDStorySave[];
   existing_id?: string | null;
 }
 
+export interface BRDEpicSave {
+  name: string;
+  description?: string;
+  order: number;
+  priority: number;
+  features: BRDFeatureSave[];
+  existing_id?: string | null;
+}
+
 export interface BRDBulkSaveRequest {
   created_by: string;
-  features: BRDFeatureSave[];
+  epics: BRDEpicSave[];
   project_context?: string;
   save_context: boolean;
 }
 
 export interface BRDBulkSaveResponse {
+  created_epics: number;
+  updated_epics: number;
   created_features: number;
   updated_features: number;
   created_stories: number;
