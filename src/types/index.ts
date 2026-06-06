@@ -512,6 +512,66 @@ export interface SprintAIPlanResult {
 }
 
 // Prompt
+// BRD Analysis
+export type BRDSyncStatus = "new" | "exists" | "update";
+
+export interface BRDStoryResult {
+  title: string;
+  description?: string;
+  order: number;
+  story_points: number;
+  priority: number;
+  sync_status: BRDSyncStatus;
+  existing_id?: string | null;
+}
+
+export interface BRDFeatureResult {
+  name: string;
+  description?: string;
+  order: number;
+  priority: number;
+  stories: BRDStoryResult[];
+  sync_status: BRDSyncStatus;
+  existing_id?: string | null;
+}
+
+export interface BRDAnalysisResult {
+  project_context: string;
+  features: BRDFeatureResult[];
+}
+
+export interface BRDStorySave {
+  title: string;
+  description?: string;
+  order: number;
+  story_points: number;
+  priority: number;
+  existing_id?: string | null;
+}
+
+export interface BRDFeatureSave {
+  name: string;
+  description?: string;
+  order: number;
+  priority: number;
+  stories: BRDStorySave[];
+  existing_id?: string | null;
+}
+
+export interface BRDBulkSaveRequest {
+  created_by: string;
+  features: BRDFeatureSave[];
+  project_context?: string;
+  save_context: boolean;
+}
+
+export interface BRDBulkSaveResponse {
+  created_features: number;
+  updated_features: number;
+  created_stories: number;
+  updated_stories: number;
+}
+
 export interface PromptCreate {
   content: string;
   target_ai?: string;

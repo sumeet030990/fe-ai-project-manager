@@ -17,11 +17,12 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
 import { getProject } from "@/services/projects";
 import AIConfigTab from "./tabs/AIConfigTab";
+import BRDAnalysisTab from "./tabs/BRDAnalysisTab";
 import FeaturesTab from "./tabs/FeaturesTab";
 import TeamTab from "./tabs/TeamTab";
 import TechStacksTab from "./tabs/TechStacksTab";
 
-const TABS = ["features", "team", "techstacks", "aiconfig"] as const;
+const TABS = ["features", "team", "techstacks", "aiconfig", "brd"] as const;
 type TabSlug = (typeof TABS)[number];
 
 const TAB_LABELS: Record<TabSlug, string> = {
@@ -29,6 +30,7 @@ const TAB_LABELS: Record<TabSlug, string> = {
   team: "Team",
   techstacks: "Tech Stacks & Plugins",
   aiconfig: "AI Config",
+  brd: "BRD Analysis",
 };
 
 export default function ProjectDetailPage() {
@@ -127,6 +129,7 @@ export default function ProjectDetailPage() {
         {activeTab === "team" && <TeamTab projectId={projectId} />}
         {activeTab === "techstacks" && <TechStacksTab projectId={projectId} />}
         {activeTab === "aiconfig" && <AIConfigTab projectId={projectId} />}
+        {activeTab === "brd" && <BRDAnalysisTab projectId={projectId} />}
       </Box>
     </PageContainer>
   );
